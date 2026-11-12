@@ -27,8 +27,9 @@ export async function GET(request, context) {
     }
 
     const response = await fetch(target.toString(), {
-      headers: { Accept: "application/json, text/plain, */*" },
-      redirect: "follow"
+      headers: { Accept: "application/json, text/plain, */*", "User-Agent": "Mozilla/5.0 (compatible; Smartflix/1.0)", Referer: "https://superflixapi.boats/" },
+      redirect: "follow",
+      cache: "no-store"
     });
     const body = await response.text();
     if (!response.ok) {
