@@ -79,67 +79,48 @@ export default function Home() {
   async function loadChannels(q = channelQuery, g = channelGenre, server = channelServer) {
     setChannelLoading(true);
     setChannelError("");
+    setChannels([]);
     try {
-      const makeParams = page => {
-        const params = new URLSearchParams({ limit: "100", page: String(page) });
-        if (q.trim()) params.set("q", q.trim());
-        if (g) params.set(server === "superflix" ? "genre" : "category", g);
-        return params.toString();
-      };
+      const params = new URLSearchParams({ limit: "100", page: "1" });
+      if (q.trim()) params.set("q", q.trim());
+      if (g) params.set(server === "superflix" ? "genre" : "category", g);
+
       let rows = [];
       if (server === "superflix") {
-        const response = await fetch(`/api/superflix/catalog/channels?${makeParams(1)}`, { cache: "no-store" });
+        // SuperFlix uses only its own /lista?category=canais API.
+        const response = await fetch(`/api/superflix/catalog/channels?${params.toString()}`, { cache: "no-store" });
         if (!response.ok) throw new Error(`SuperFlix respondeu HTTP ${response.status}`);
+        rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "superflix" }));
+      } else if (server === "streambetter") {
+        // StreamBetter uses only its own /api/channels API.
+        const response = await fetch(`/api/streambetter/api/channels?${params.toString()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`StreamBetter respondeu HTTP ${response.status}`);
         const payload = await response.json();
-        rows = normalizeChannels(payload).map(channel => ({ ...channel, source: "superflix" }));
-      } else {
-        const firstResponse = await fetch(`/api/streambetter/api/channels?${makeParams(1)}`, { cache: "no-store" });
-        if (!firstResponse.ok) throw new Error(`StreamBetter respondeu HTTP ${firstResponse.status}`);
-        const firstPayload = await firstResponse.json();
-        const firstRows = normalizeChannels(firstPayload);
-        const totalPages = Math.min(20, Number(firstPayload?.pagination?.totalPages || 1));
-        const later = await Promise.all(Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
-          fetch(`/api/streambetter/api/channels?${makeParams(index + 2)}`, { cache: "no-store" })
-            .then(response => response.ok ? response.json() : null).catch(() => null)
-        ));
-        rows = [...firstRows, ...later.flatMap(payload => normalizeChannels(payload))].map(channel => ({
-          ...channel,
-          source: "streambetter",
-          slug: channel.slug || channel.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+        const pages = Math.min(20, Math.max(1, Number(payload?.pagination?.totalPages || 1)));
+        const extra = await Promise.all(Array.from({ length: pages - 1 }, (_, index) => {
+          const pageParams = new URLSearchParams(params);
+          pageParams.set("page", String(index + 2));
+          return fetch(`/api/streambetter/api/channels?${pageParams.toString()}`, { cache: "no-store" })
+            .then(r => r.ok ? r.json() : null).catch(() => null);
         }));
+        rows = [...normalizeChannels(payload), ...extra.flatMap(normalizeChannels)].map(channel => ({ ...channel, source: "streambetter" }));
+      } else if (server === "reidosembeds") {
+        // Rei dos Embeds uses only its own /api/channels API.
+        const response = await fetch(`/api/reidosembeds/channels?${params.toString()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Rei dos Embeds respondeu HTTP ${response.status}`);
+        rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "reidosembeds" }));
+      } else {
+        throw new Error("Servidor de canais desconhecido.");
       }
       const unique = new Map(rows.map(channel => [String(channel.id || channel.slug || channel.name).toLowerCase(), channel]));
       rows = [...unique.values()];
-      if (!rows.length) throw new Error(`A API ${server === "superflix" ? "SuperFlix" : "StreamBetter"} respondeu, mas não retornou canais em um formato reconhecido.`);
+      if (!rows.length) throw new Error("A API respondeu, mas não retornou canais em um formato reconhecido.");
       setChannels(rows);
     } catch (e) {
       console.error(`Erro ao carregar canais de ${server}:`, e);
-      if (server === "superflix") {
-        try {
-          const backupResponse = await fetch(`/api/streambetter/api/channels?${new URLSearchParams({ page: "1", limit: "100" })}`, { cache: "no-store" });
-          if (!backupResponse.ok) throw new Error(`StreamBetter respondeu HTTP ${backupResponse.status}`);
-          const backupPayload = await backupResponse.json();
-          const backupPages = Math.min(20, Number(backupPayload?.pagination?.totalPages || 1));
-          const backupLater = await Promise.all(Array.from({ length: Math.max(0, backupPages - 1) }, (_, index) =>
-            fetch(`/api/streambetter/api/channels?${new URLSearchParams({ page: String(index + 2), limit: "100" })}`, { cache: "no-store" })
-              .then(response => response.ok ? response.json() : null).catch(() => null)
-          ));
-          const backupRows = [...normalizeChannels(backupPayload), ...backupLater.flatMap(payload => normalizeChannels(payload))].map(channel => ({
-            ...channel,
-            source: "streambetter",
-            slug: channel.slug || channel.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-          }));
-          setChannels([...new Map(backupRows.map(channel => [String(channel.id || channel.slug || channel.name).toLowerCase(), channel])).values()]);
-          setChannelError("");
-          console.warn("SuperFlix indisponível; exibindo StreamBetter como contingência.");
-        } catch (backupError) {
-          setChannels([]);
-          setChannelError(`SuperFlix indisponível (${e?.message || "erro 502"}) e StreamBetter não respondeu (${backupError?.message || "erro"}).`);
-        }
-      } else {
-        setChannels([]);
-        setChannelError(`StreamBetter: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
-      }
+      setChannels([]);
+      const label = server === "superflix" ? "SuperFlix" : server === "streambetter" ? "StreamBetter" : "Rei dos Embeds";
+      setChannelError(`${label}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
     } finally {
       setChannelLoading(false);
     }
@@ -423,7 +404,7 @@ export default function Home() {
       <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar filmes e séries..." aria-label="Buscar filmes e séries" />{query && <button onClick={() => setQuery("")} aria-label="Limpar busca">×</button>}</div>
     </header>
 
-    {activeTab === "tv" ? <section className="section tv-online" id="tv-online"><div className="section-heading"><div><p className="eyebrow">TRANSMISSÃO AO VIVO</p><h2>TV <em>Online</em></h2></div></div><div className="channel-server-switch" aria-label="Servidor de canais"><button className={channelServer === "superflix" ? "active" : ""} onClick={() => { setChannelServer("superflix"); loadChannels(channelQuery, channelGenre, "superflix"); }}>SuperFlix</button><button className={channelServer === "streambetter" ? "active" : ""} onClick={() => { setChannelServer("streambetter"); loadChannels(channelQuery, channelGenre, "streambetter"); }}>StreamBetter</button></div><div className="tv-filters"><input value={channelQuery} onChange={e => setChannelQuery(e.target.value)} onKeyDown={e => { if (e.key === "Enter") loadChannels(); }} placeholder="Buscar canal (ex.: sportv)" /><select value={channelGenre} onChange={e => { setChannelGenre(e.target.value); loadChannels(channelQuery, e.target.value, channelServer); }}><option value="">Todos os gêneros</option><option value="esportes">Esportes</option><option value="noticias">Notícias</option><option value="filmes">Filmes</option><option value="infantil">Infantil</option><option value="abertos">Canais abertos</option></select><button className="primary-btn" onClick={() => loadChannels()}>Buscar</button></div>{channelLoading ? <p className="muted">Carregando canais...</p> : channelError ? <p className="error-message">{channelError}</p> : channels.length ? <div className="channel-grid">{channels.map(ch => <button className="channel-card" key={ch.id} onClick={() => { setSelectedChannel(ch); setChannelPlayerSource(ch.source || channelServer); }}><div className="channel-logo">{ch.logo ? <img src={ch.logo} alt="" /> : <span>TV</span>}</div><strong>{ch.name}</strong><small>{ch.genre || "Canal ao vivo"}</small></button>)}</div> : <p className="muted">Nenhum canal encontrado. Toque em Buscar para carregar a lista.</p>}</section> : query.trim() ? <section className="search-results section">
+    {activeTab === "tv" ? <section className="section tv-online" id="tv-online"><div className="section-heading"><div><p className="eyebrow">TRANSMISSÃO AO VIVO</p><h2>TV <em>Online</em></h2></div></div><div className="channel-server-switch" aria-label="Servidor de canais"><button className={channelServer === "superflix" ? "active" : ""} onClick={() => { setChannelServer("superflix"); loadChannels(channelQuery, channelGenre, "superflix"); }}>SuperFlix</button><button className={channelServer === "streambetter" ? "active" : ""} onClick={() => { setChannelServer("streambetter"); loadChannels(channelQuery, channelGenre, "streambetter"); }}>StreamBetter</button><button className={channelServer === "reidosembeds" ? "active" : ""} onClick={() => { setChannelServer("reidosembeds"); loadChannels(channelQuery, channelGenre, "reidosembeds"); }}>Rei dos Embeds</button></div><div className="tv-filters"><input value={channelQuery} onChange={e => setChannelQuery(e.target.value)} onKeyDown={e => { if (e.key === "Enter") loadChannels(); }} placeholder="Buscar canal (ex.: sportv)" /><select value={channelGenre} onChange={e => { setChannelGenre(e.target.value); loadChannels(channelQuery, e.target.value, channelServer); }}><option value="">Todos os gêneros</option><option value="esportes">Esportes</option><option value="noticias">Notícias</option><option value="filmes">Filmes</option><option value="infantil">Infantil</option><option value="abertos">Canais abertos</option></select><button className="primary-btn" onClick={() => loadChannels()}>Buscar</button></div>{channelLoading ? <p className="muted">Carregando canais...</p> : channelError ? <p className="error-message">{channelError}</p> : channels.length ? <div className="channel-grid">{channels.map(ch => <button className="channel-card" key={ch.id} onClick={() => { setSelectedChannel(ch); setChannelPlayerSource(ch.source || channelServer); }}><div className="channel-logo">{ch.logo ? <img src={ch.logo} alt="" /> : <span>TV</span>}</div><strong>{ch.name}</strong><small>{ch.genre || "Canal ao vivo"}</small></button>)}</div> : <p className="muted">Nenhum canal encontrado. Toque em Buscar para carregar a lista.</p>}</section> : query.trim() ? <section className="search-results section">
       <div className="section-heading"><div><p className="eyebrow">PESQUISA</p><h2>Resultados para “{query}”</h2></div></div>
       {searching ? <p className="muted">Buscando filmes e séries...</p> : cards(results)}
     </section> : <>
@@ -482,7 +463,7 @@ export default function Home() {
     </nav>
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
-    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.source === "streambetter" ? <iframe src={`https://streambetter.shop/canal/${selectedChannel.slug}`} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : selectedChannel.stream ? (/\.(m3u8|mp4)(\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">Este canal não possui um link de reprodução disponível.</p>}</div><p className="muted">Transmissão fornecida por {selectedChannel.source === "streambetter" ? "StreamBetter" : "SuperFlix"}.</p></div></article></div>}
+    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.source === "streambetter" ? <iframe src={`https://streambetter.shop/canal/${selectedChannel.slug}`} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : selectedChannel.stream ? (/\.(m3u8|mp4)(\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">Este canal não possui um link de reprodução disponível.</p>}</div><p className="muted">Transmissão fornecida por {selectedChannel.source === "streambetter" ? "StreamBetter" : selectedChannel.source === "reidosembeds" ? "Rei dos Embeds" : "SuperFlix"}.</p></div></article></div>}
     {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}>
       <article className="modal" onClick={e => e.stopPropagation()}>
         <button className="close" onClick={() => setSelected(null)} aria-label="Fechar">×</button>
