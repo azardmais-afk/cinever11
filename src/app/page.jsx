@@ -291,17 +291,27 @@ export default function Home() {
       <div className="section-heading"><div><p className="eyebrow">PESQUISA</p><h2>Resultados para “{query}”</h2></div></div>
       {searching ? <p className="muted">Buscando filmes e séries...</p> : cards(results)}
     </section> : <>
-      <section className="hero">
-        <div className="hero-content"><p className="eyebrow">SEU UNIVERSO DE ENTRETENIMENTO</p>
-          <h1>Histórias incríveis.<br /><em>Do seu jeito.</em></h1>
-          <p className="hero-copy">Explore filmes, séries, lançamentos e clássicos. Descubra onde assistir aos seus próximos favoritos.</p>
-          <a className="primary-btn" href="#catalogo">Explorar catálogo <span>→</span></a>
-        </div>
-        <div className="hero-glow" /><div className="hero-note"><span className="pulse" /> CATÁLOGO ATUALIZADO</div>
-      </section>
+      {(() => {
+        const featured = trending[0] || popular[0];
+        const totalTitles = Object.values(catalogCounts).every(value => value !== null) ? Object.values(catalogCounts).reduce((sum, value) => sum + value, 0) : null;
+        return <>
+          <section className="hero netflix-hero" style={featured?.backdrop_path ? { backgroundImage: `linear-gradient(90deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.62) 48%,rgba(0,0,0,.12) 100%),linear-gradient(0deg,#080808 0%,transparent 45%),url(${poster(featured.backdrop_path,"w1280")})` } : undefined}>
+            <div className="hero-content">
+              <p className="eyebrow">DESTAQUE SMARTFLIX</p>
+              <h1>{featured ? (featured.title || featured.name) : "Filmes e séries para você"}</h1>
+              <p className="hero-copy">{featured?.overview || "Descubra filmes, séries, animes e doramas para assistir quando quiser."}</p>
+              <div className="hero-actions">
+                {featured && <button className="primary-btn hero-watch" onClick={() => openTitle(featured)}>▶ Assistir</button>}
+                {featured && <button className="secondary-btn" onClick={() => openTitle(featured)}>ⓘ Mais informações</button>}
+              </div>
+            </div>
+          </section>
+          <div className="catalog-total">Catálogo carregado · {totalTitles === null ? "contando títulos nas listas..." : totalTitles.toLocaleString("pt-BR") + " títulos encontrados nas listas consultadas."}</div>
+        </>;
+      })()}
 
       <section className="section" id="tendencias">
-        <div className="section-heading"><div><p className="eyebrow">O QUE ESTÁ EM ALTA</p><h2>Tendências da <em>semana</em></h2></div><span className="section-count">SMARTFLIX</span></div>
+        <div className="section-heading"><div><h2>Em alta agora</h2></div></div>
         {loading ? <p className="muted">Carregando catálogo...</p> : cards(trending)}
       </section>
 
@@ -321,11 +331,12 @@ export default function Home() {
       </section>
 
       <section className="section" id="avaliados">
-        <div className="section-heading"><div><p className="eyebrow">ESCOLHAS DO PÚBLICO</p><h2>Mais <em>bem avaliados</em></h2></div></div>
+        <div className="section-heading"><div><h2>Mais bem avaliados</h2></div></div>
         {loading ? <p className="muted">Carregando...</p> : cards(topRated)}
       </section>
     </>}
 
+    <nav className="mobile-dock" aria-label="Navegação principal"><button className={activeTab === "home" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("movie"); window.scrollTo({ top: 0, behavior: "smooth" }); }}>⌂<span>Início</span></button><button onClick={() => { setActiveTab("home"); setKind("movie"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}>▣<span>Filmes</span></button><button onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}>▤<span>Séries</span></button><button onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}>✦<span>Animes</span></button><button onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}>♡<span>Doramas</span></button></nav>
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
     {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.stream ? (/\\.(m3u8|mp4)(\\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">A lista retornou o canal, mas não informou um link de reprodução.</p>}</div><p className="muted">Transmissão fornecida pela SuperFlix. A disponibilidade depende da fonte do canal.</p></div></article></div>}
