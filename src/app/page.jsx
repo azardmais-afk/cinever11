@@ -117,15 +117,54 @@ export default function Home() {
     setError("");
     try {
       if (type === "anime" || type === "dorama") {
-        const response = await fetch("/api/streambetter/api/" + (type === "anime" ? "animes" : "doramas") + "?page=1&limit=100");
-        if (!response.ok) throw new Error("StreamBetter " + type + ": HTTP " + response.status);
-        const payload = await response.json();
-        const categoryItems = (payload?.titles || []).map(item => {
-          const id = Number(item.tmdb_id);
-          const mediaType = item.type === "movie" ? "movie" : "tv";
-          return { id, title: item.title || item.name || "Título sem nome", name: item.title || item.name || "Título sem nome", poster_path: item.poster_path || "", overview: item.overview || "", release_date: item.release_date || "", first_air_date: item.first_air_date || "", vote_average: Number(item.vote_average || 0), media_type: mediaType, catalogCategory: type, streambetter: true };
-        }).filter(item => item.id);
-        setPopular(categoryItems);
+        const categoryPath = type === "anime" ? "animes" : "doramas";
+        const [streamResponse, redeflixResponse, superflixResponse] = await Promise.all([
+          fetch(`/api/streambetter/api/${categoryPath}?page=1&limit=100`).catch(() => null),
+          fetch(`/api/redeflix/catalog/${type}`).catch(() => null),
+          fetch(`/api/superflix/catalog/${type}`).catch(() => null)
+        ]);
+        const streamPayload = streamResponse?.ok ? await streamResponse.json().catch(() => null) : null;
+        const redeflixText = redeflixResponse?.ok ? await redeflixResponse.text().catch(() => "") : "";
+        const superPayload = superflixResponse?.ok ? await superflixResponse.json().catch(() => null) : null;
+        const streamTitles = Array.isArray(streamPayload?.titles) ? streamPayload.titles : [];
+        const streamItems = await Promise.all(streamTitles.map(async item => {
+          const id = Number(item.tmdb_id || item.id_tmdb || item.id);
+          if (!id) return null;
+          const rawType = String(item.type || item.media_type || "").toLowerCase();
+          const preferred = ["movie", "film", "filme"].includes(rawType) ? "movie" : "tv";
+          try {
+            const resolved = await api(`${preferred}/${id}?language=pt-BR`);
+            return { ...resolved, id, media_type: preferred, catalogCategory: type, streambetter: true };
+          } catch {
+            return {
+              id, title: item.title || item.name || "Título sem nome", name: item.title || item.name || "Título sem nome",
+              poster_path: item.poster_path || "", overview: item.overview || "",
+              release_date: item.release_date || "", first_air_date: item.first_air_date || "",
+              vote_average: Number(item.vote_average || 0), media_type: preferred,
+              catalogCategory: type, streambetter: true
+            };
+          }
+        }));
+        const redeIds = redeflixText.split(/\\s+/).map(value => value.trim()).filter(value => /^\\d+$/.test(value));
+        const superIds = extractIds(superPayload).filter(value => /^\\d+$/.test(value));
+        const extraIds = [...new Set([...redeIds, ...superIds])].filter(id => !streamTitles.some(item => String(item.tmdb_id || item.id_tmdb || item.id) === id)).slice(0, 40);
+        const extraItems = await Promise.all(extraIds.map(async value => {
+          const id = Number(value);
+          for (const mediaType of ["tv", "movie"]) {
+            try {
+              const resolved = await api(`${mediaType}/${id}?language=pt-BR`);
+              return { ...resolved, id, media_type: mediaType, catalogCategory: type, redeflix: redeIds.includes(value), superflix: superIds.includes(value) };
+            } catch {}
+          }
+          return null;
+        }));
+        const unique = new Map();
+        for (const item of [...streamItems, ...extraItems].filter(Boolean)) {
+          const key = `${item.media_type}-${item.id}`;
+          if (!unique.has(key)) unique.set(key, item);
+          else unique.set(key, { ...unique.get(key), ...item, streambetter: unique.get(key).streambetter || item.streambetter, redeflix: unique.get(key).redeflix || item.redeflix, superflix: unique.get(key).superflix || item.superflix });
+        }
+        setPopular([...unique.values()]);
         setTrending([]);
         setTopRated([]);
         setGenres([]);
