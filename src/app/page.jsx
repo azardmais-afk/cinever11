@@ -61,19 +61,29 @@ export default function Home() {
 
 
   function normalizeChannels(payload) {
-    const candidate = Array.isArray(payload) ? payload : (payload?.data || payload?.items || payload?.results || payload?.canais || payload?.channels || []);
-    const rows = Array.isArray(candidate) ? candidate : (candidate?.channels || candidate?.items || candidate?.results || []);
+    // Normaliza envelopes distintos sem descartar os links próprios de cada API.
+    const root = payload?.data ?? payload?.result ?? payload;
+    const rows = Array.isArray(root) ? root
+      : Array.isArray(root?.channels) ? root.channels
+      : Array.isArray(root?.items) ? root.items
+      : Array.isArray(root?.results) ? root.results
+      : Array.isArray(payload?.channels) ? payload.channels
+      : Array.isArray(payload?.items) ? payload.items
+      : Array.isArray(payload?.results) ? payload.results
+      : [];
     return rows.filter(item => item && (item.is_active === undefined || item.is_active === true)).map((item, index) => {
       const name = item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`;
-      const slug = item.slug || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const slug = item.slug || item.id || name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const embeds = Array.isArray(item.embeds) ? item.embeds.filter(embed => embed && (embed.embed_url || embed.url || embed.src)) : [];
+      const stream = item.embed_url || item.embedUrl || item.iframe_url || item.player_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || embeds[0]?.embed_url || embeds[0]?.url || embeds[0]?.src || "";
       return {
         id: item.id ?? item.channel_id ?? slug ?? index,
         name,
-        genre: item.category || item.genre || item.genero || item.categoria || (Array.isArray(item.categories) ? item.categories.join(", ") : ""),
+        genre: item.category || item.genre || item.genero || item.categoria || (Array.isArray(item.categories) ? item.categories.map(value => typeof value === "object" ? value.name : value).join(", ") : ""),
         logo: item.logo_url || item.logo || item.logoUrl || item.image || item.poster || item.icon || "",
-        stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || item.embeds?.[0]?.embed_url || "",
-        embeds: Array.isArray(item.embeds) ? item.embeds.filter(embed => embed?.embed_url) : [],
-        slug
+        stream,
+        embeds,
+        slug: String(slug)
       };
     }).filter(item => item.name);
   }
