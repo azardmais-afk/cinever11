@@ -1,3 +1,4 @@
+
 {
   "name": "cineverse",
   "version": "1.0.0",
@@ -6,12 +7,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "dependencies": {
     "next": "^15.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@opennextjs/cloudflare": "latest",
+    "wrangler": "latest"
+  }
 }
