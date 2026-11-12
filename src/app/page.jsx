@@ -76,10 +76,14 @@ export default function Home() {
       } catch (freeError) { console.warn("RedeFlix gratuita indisponível", freeError); }
       let superItems = [];
       try {
-        const category = type === "movie" ? "movies" : "series";
-        const response = await fetch(`/api/superflix/catalog/${category}`);
-        const payload = response.ok ? await response.json() : [];
-        const ids = extractIds(payload).slice(0, 30);
+        const categories = type === "movie" ? ["movies"] : ["series", "anime", "dorama"];
+        const payloads = await Promise.all(categories.map(async category => {
+          try {
+            const response = await fetch(`/api/superflix/catalog/${category}`);
+            return response.ok ? await response.json() : [];
+          } catch { return []; }
+        }));
+        const ids = [...new Set(payloads.flatMap(extractIds))].slice(0, 30);
         if (type === "movie") {
           const found = await Promise.all(ids.filter(id => id.startsWith("tt")).map(async imdbId => {
             try {
