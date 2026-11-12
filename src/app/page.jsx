@@ -13,7 +13,7 @@ export default function Home() {
   const [trending, setTrending] = useState([]);
   const [topRated, setTopRated] = useState([]);
   const [genres, setGenres] = useState([]);
-  const [catalogCounts, setCatalogCounts] = useState({ movies: 0, series: 0, anime: 0, dorama: 0 });
+  const [catalogCounts, setCatalogCounts] = useState({ movies: null, series: null, anime: null, dorama: null });
   const [genre, setGenre] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -103,28 +103,7 @@ export default function Home() {
         api(`${type}/top_rated?language=pt-BR&page=1`),
         api(`genre/${type}/list?language=pt-BR`)
       ]);
-      // Contagens dos catálogos completos, separadas por fonte e sem estimativas.
-      try {
-        const [movieIdsText, seriesRaw, animeRaw, doramaRaw, movieTotals, tvTotals] = await Promise.all([
-          fetch("/api/redeflix/catalog/movies").then(r => r.ok ? r.text() : ""),
-          fetch("/api/redeflix/catalog/series").then(r => r.ok ? r.json() : null),
-          fetch("/api/redeflix/catalog/anime").then(r => r.ok ? r.text() : ""),
-          fetch("/api/redeflix/catalog/dorama").then(r => r.ok ? r.text() : ""),
-          api("movie/popular?language=pt-BR&page=1"),
-          api("tv/popular?language=pt-BR&page=1")
-        ]);
-        const countText = value => new Set(String(value || "").split(/\\s+/).map(x => x.trim()).filter(x => /^\d+$/.test(x))).size;
-        const countSeries = Array.isArray(seriesRaw?.items) ? new Set(seriesRaw.items.map(x => String(x.id_tmdb || "")).filter(Boolean)).size : 0;
-        const movieSourceCount = countText(movieIdsText);
-        const animePayload = await fetch("/api/superflix/catalog/anime").then(r => r.ok ? r.json() : []);
-        const doramaPayload = await fetch("/api/superflix/catalog/dorama").then(r => r.ok ? r.json() : []);
-        setCatalogCounts({
-          movies: Math.max(Number(movieTotals.total_results || 0), movieSourceCount),
-          series: Math.max(Number(tvTotals.total_results || 0), countSeries),
-          anime: new Set([...extractIds(animeRaw), ...extractIds(animePayload)]).size,
-          dorama: new Set([...extractIds(doramaRaw), ...extractIds(doramaPayload)]).size
-        });
-      } catch (countError) { console.warn("Não foi possível atualizar todas as contagens", countError); }
+      
       let freeItems = [];
       try {
         if (type === "movie") {
@@ -184,6 +163,43 @@ export default function Home() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    let active = true;
+    const safe = async (url, type = "json") => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        return type === "text" ? await response.text() : await response.json();
+      } catch { return null; }
+    };
+    const countText = value => new Set(String(value || "").split(/\s+/).map(x => x.trim()).filter(x => /^\d+$/.test(x))).size;
+    (async () => {
+      const [redeMovies, redeSeries, redeAnime, redeDorama, superMovies, superSeries, superAnime, superDorama] = await Promise.all([
+        safe("/api/redeflix/catalog/movies", "text"),
+        safe("/api/redeflix/catalog/series"),
+        safe("/api/redeflix/catalog/anime", "text"),
+        safe("/api/redeflix/catalog/dorama", "text"),
+        safe("/api/superflix/catalog/movies"),
+        safe("/api/superflix/catalog/series"),
+        safe("/api/superflix/catalog/anime"),
+        safe("/api/superflix/catalog/dorama")
+      ]);
+      const seriesIds = Array.isArray(redeSeries?.items) ? redeSeries.items.map(x => String(x.id_tmdb || "")).filter(Boolean) : [];
+      const countAvailable = (...values) => {
+        const ids = values.flatMap(value => extractIds(value));
+        return new Set(ids).size;
+      };
+      const next = {
+        movies: countText(redeMovies) + extractIds(superMovies).length,
+        series: new Set([...seriesIds, ...extractIds(superSeries)]).size,
+        anime: countAvailable(redeAnime, superAnime),
+        dorama: countAvailable(redeDorama, superDorama)
+      };
+      if (active) setCatalogCounts(next);
+    })();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => { loadCatalog(kind); }, [kind]);
 
@@ -275,14 +291,6 @@ export default function Home() {
       <div className="section-heading"><div><p className="eyebrow">PESQUISA</p><h2>Resultados para “{query}”</h2></div></div>
       {searching ? <p className="muted">Buscando filmes e séries...</p> : cards(results)}
     </section> : <>
-      <section className="catalog-stats" aria-label="Tamanho dos catálogos">
-        <div className="catalog-stats-heading"><span className="eyebrow">SMARTFLIX</span><h2>Um universo de títulos</h2><p>Catálogos atualizados das fontes conectadas</p></div>
-        <div className="catalog-stat"><strong>{catalogCounts.movies.toLocaleString("pt-BR")}</strong><span>Filmes</span></div>
-        <div className="catalog-stat"><strong>{catalogCounts.series.toLocaleString("pt-BR")}</strong><span>Séries</span></div>
-        <div className="catalog-stat"><strong>{catalogCounts.anime.toLocaleString("pt-BR")}</strong><span>Animes</span></div>
-        <div className="catalog-stat"><strong>{catalogCounts.dorama.toLocaleString("pt-BR")}</strong><span>Doramas</span></div>
-      </section>
-
       <section className="hero">
         <div className="hero-content"><p className="eyebrow">SEU UNIVERSO DE ENTRETENIMENTO</p>
           <h1>Histórias incríveis.<br /><em>Do seu jeito.</em></h1>
@@ -299,6 +307,14 @@ export default function Home() {
 
       <section className="section" id="catalogo">
         <div className="section-heading"><div><p className="eyebrow">DESCUBRA SEU PRÓXIMO FAVORITO</p><h2>Explore o <em>catálogo</em></h2></div></div>
+      <section className="catalog-stats" aria-label="Quantidade de títulos nos catálogos">
+        <div className="catalog-stats-heading"><span className="eyebrow">CATÁLOGO SMARTFLIX</span><h2>Explore milhares de títulos</h2><p>Quantidade disponível nas listas conectadas</p></div>
+        <div className="catalog-stat"><strong>{catalogCounts.movies === null ? "…" : catalogCounts.movies.toLocaleString("pt-BR")}</strong><span>Filmes</span></div>
+        <div className="catalog-stat"><strong>{catalogCounts.series === null ? "…" : catalogCounts.series.toLocaleString("pt-BR")}</strong><span>Séries</span></div>
+        <div className="catalog-stat"><strong>{catalogCounts.anime === null ? "…" : catalogCounts.anime.toLocaleString("pt-BR")}</strong><span>Animes</span></div>
+        <div className="catalog-stat"><strong>{catalogCounts.dorama === null ? "…" : catalogCounts.dorama.toLocaleString("pt-BR")}</strong><span>Doramas</span></div>
+      </section>
+
         <div className="kind-switch"><button className={kind === "movie" ? "active" : ""} onClick={() => { setKind("movie"); setGenre(""); }}>Filmes</button><button className={kind === "tv" ? "active" : ""} onClick={() => { setKind("tv"); setGenre(""); }}>Séries</button></div>
         <div className="genre-list"><button className={!genre ? "active" : ""} onClick={() => setGenre("")}>Todos</button>{genres.map(g => <button key={g.id} className={String(g.id) === genre ? "active" : ""} onClick={() => setGenre(String(g.id))}>{g.name}</button>)}</div>
         {error ? <p className="error-message">{error}</p> : loading ? <p className="muted">Carregando...</p> : cards(filtered)}
