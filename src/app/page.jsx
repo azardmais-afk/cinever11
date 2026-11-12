@@ -13,6 +13,7 @@ export default function Home() {
   const [trending, setTrending] = useState([]);
   const [topRated, setTopRated] = useState([]);
   const [genres, setGenres] = useState([]);
+  const [catalogCounts, setCatalogCounts] = useState({ movies: 0, series: 0, anime: 0, dorama: 0 });
   const [genre, setGenre] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -102,6 +103,28 @@ export default function Home() {
         api(`${type}/top_rated?language=pt-BR&page=1`),
         api(`genre/${type}/list?language=pt-BR`)
       ]);
+      // Contagens dos catálogos completos, separadas por fonte e sem estimativas.
+      try {
+        const [movieIdsText, seriesRaw, animeRaw, doramaRaw, superMovieRaw, superSeriesRaw] = await Promise.all([
+          fetch("/api/redeflix/catalog/movies").then(r => r.ok ? r.text() : ""),
+          fetch("/api/redeflix/catalog/series").then(r => r.ok ? r.json() : null),
+          fetch("/api/redeflix/catalog/anime").then(r => r.ok ? r.text() : ""),
+          fetch("/api/redeflix/catalog/dorama").then(r => r.ok ? r.text() : ""),
+          fetch("/api/superflix/catalog/movies").then(r => r.ok ? r.json() : []),
+          fetch("/api/superflix/catalog/series").then(r => r.ok ? r.json() : [])
+        ]);
+        const countText = value => new Set(String(value || "").split(/\\s+/).map(x => x.trim()).filter(x => /^\\d+$/.test(x))).size;
+        const countSeries = Array.isArray(seriesRaw?.items) ? new Set(seriesRaw.items.map(x => String(x.id_tmdb || "")).filter(Boolean)).size : 0;
+        const movieSourceCount = countText(movieIdsText);
+        const animePayload = await fetch("/api/superflix/catalog/anime").then(r => r.ok ? r.json() : []);
+        const doramaPayload = await fetch("/api/superflix/catalog/dorama").then(r => r.ok ? r.json() : []);
+        setCatalogCounts({
+          movies: Math.max(Number(p.total_results || 0), movieSourceCount),
+          series: Math.max(Number(t.total_results || 0), countSeries),
+          anime: new Set([...extractIds(animeRaw), ...extractIds(animePayload)]).size,
+          dorama: new Set([...extractIds(doramaRaw), ...extractIds(doramaPayload)]).size
+        });
+      } catch (countError) { console.warn("Não foi possível atualizar todas as contagens", countError); }
       let freeItems = [];
       try {
         if (type === "movie") {
@@ -252,6 +275,14 @@ export default function Home() {
       <div className="section-heading"><div><p className="eyebrow">PESQUISA</p><h2>Resultados para “{query}”</h2></div></div>
       {searching ? <p className="muted">Buscando filmes e séries...</p> : cards(results)}
     </section> : <>
+      <section className="catalog-stats" aria-label="Tamanho dos catálogos">
+        <div className="catalog-stats-heading"><span className="eyebrow">SMARTFLIX</span><h2>Um universo de títulos</h2><p>Catálogos atualizados das fontes conectadas</p></div>
+        <div className="catalog-stat"><strong>{catalogCounts.movies.toLocaleString("pt-BR")}</strong><span>Filmes</span></div>
+        <div className="catalog-stat"><strong>{catalogCounts.series.toLocaleString("pt-BR")}</strong><span>Séries</span></div>
+        <div className="catalog-stat"><strong>{catalogCounts.anime.toLocaleString("pt-BR")}</strong><span>Animes</span></div>
+        <div className="catalog-stat"><strong>{catalogCounts.dorama.toLocaleString("pt-BR")}</strong><span>Doramas</span></div>
+      </section>
+
       <section className="hero">
         <div className="hero-content"><p className="eyebrow">SEU UNIVERSO DE ENTRETENIMENTO</p>
           <h1>Histórias incríveis.<br /><em>Do seu jeito.</em></h1>
