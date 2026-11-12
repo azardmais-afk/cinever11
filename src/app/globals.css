@@ -27,3 +27,28 @@
 .channel-modal .embed-player iframe{width:100%;height:100%;border:0}
 @media(max-width:850px){.channel-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:650px){.topbar nav button{font-size:11px}.channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tv-filters input,.tv-filters select{width:100%;flex-basis:100%}.tv-filters .primary-btn{justify-content:center}}
+
+
+/* Netflix-inspired catalog layout and live catalog counters */
+:root{--red:#e50914}
+body{background:#080808}
+.topbar{background:rgba(8,8,8,.94);border-bottom-color:#ffffff0d}
+.topbar nav{font-size:14px;gap:24px}
+.topbar nav button.nav-active{color:#fff;font-weight:700}
+.hero{min-height:570px;background:linear-gradient(90deg,#080808 0%,rgba(8,8,8,.88) 35%,rgba(8,8,8,.18) 100%),radial-gradient(ellipse at 78% 35%,#651326 0%,#281019 32%,#080808 72%);padding-top:125px}
+.hero h1{font-size:clamp(48px,6vw,76px);text-shadow:0 2px 20px #000}
+.hero:after{right:5%;top:10%;width:390px;height:390px;border-color:#ffffff10}
+.catalog-stats{margin:0;padding:24px 6vw 28px;display:grid;grid-template-columns:2fr repeat(4,minmax(90px,1fr));gap:14px;align-items:center;background:linear-gradient(180deg,#151515,#0b0b0b);border-top:1px solid #242424;border-bottom:1px solid #242424}
+.catalog-stats-heading h2{font:600 20px 'Space Grotesk';margin:0 0 5px}.catalog-stats-heading p{margin:0;color:#888;font-size:11px}.catalog-stats-heading .eyebrow{margin:0 0 5px}
+.catalog-stat{display:flex;flex-direction:column;gap:4px;padding-left:18px;border-left:1px solid #333}
+.catalog-stat strong{font:700 25px 'Space Grotesk';color:#fff;line-height:1.1}.catalog-stat span{font-size:11px;color:#aaa}
+.section{padding-top:42px}
+.section-heading h2{font-size:26px}
+.movie-grid{display:flex;overflow-x:auto;overflow-y:hidden;gap:13px;padding:4px 3px 18px;scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.movie-card{flex:0 0 clamp(135px,15vw,190px);scroll-snap-align:start;transition:transform .2s ease}
+.movie-card:hover{transform:scale(1.045);z-index:1}
+.poster-wrap{border-radius:4px;box-shadow:0 5px 18px #0008}
+.movie-meta strong{font-size:13px}
+.movie-meta span{font-size:11px}
+.kind-switch button.active,.genre-list button.active,.primary-btn{background:#e50914;border-color:#e50914}
+@media(max-width:700px){.catalog-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:20px 5vw}.catalog-stats-heading{grid-column:1/-1}.catalog-stat{padding-left:10px}.catalog-stat strong{font-size:20px}.catalog-stat span{font-size:10px}.hero{min-height:490px;padding:82px 7vw 90px}.hero h1{font-size:43px}.movie-card{flex-basis:138px}.section{padding-top:36px}}
