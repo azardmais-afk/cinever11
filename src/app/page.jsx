@@ -145,8 +145,8 @@ export default function Home() {
             };
           }
         }));
-        const redeIds = redeflixText.split(/\\s+/).map(value => value.trim()).filter(value => /^\\d+$/.test(value));
-        const superIds = extractIds(superPayload).filter(value => /^\\d+$/.test(value));
+        const redeIds = redeflixText.split(/\s+/).map(value => value.trim()).filter(value => /^\d+$/.test(value));
+        const superIds = extractIds(superPayload).filter(value => /^\d+$/.test(value));
         const extraIds = [...new Set([...redeIds, ...superIds])].filter(id => !streamTitles.some(item => String(item.tmdb_id || item.id_tmdb || item.id) === id)).slice(0, 40);
         const extraItems = await Promise.all(extraIds.map(async value => {
           const id = Number(value);
