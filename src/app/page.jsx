@@ -136,13 +136,13 @@ export default function Home() {
           const preferred = ["movie", "film", "filme"].includes(rawType) ? "movie" : "tv";
           try {
             const resolved = await api(`${preferred}/${id}?language=pt-BR`);
-            return { ...resolved, id, media_type: preferred, catalogCategory: type, streambetter: true };
+            return { ...resolved, id, media_type: preferred, genre_ids: resolved.genre_ids || (resolved.genres || []).map(genre => genre.id), catalogCategory: type, streambetter: true };
           } catch {
             return {
               id, title: item.title || item.name || "Título sem nome", name: item.title || item.name || "Título sem nome",
               poster_path: item.poster_path || "", overview: item.overview || "",
               release_date: item.release_date || "", first_air_date: item.first_air_date || "",
-              vote_average: Number(item.vote_average || 0), media_type: preferred,
+              vote_average: Number(item.vote_average || 0), genre_ids: item.genre_ids || (item.genres || []).map(genre => genre.id), media_type: preferred,
               catalogCategory: type, streambetter: true
             };
           }
@@ -155,7 +155,7 @@ export default function Home() {
           for (const mediaType of ["tv", "movie"]) {
             try {
               const resolved = await api(`${mediaType}/${id}?language=pt-BR`);
-              return { ...resolved, id, media_type: mediaType, catalogCategory: type, redeflix: redeIds.includes(value), superflix: superIds.includes(value) };
+              return { ...resolved, id, media_type: mediaType, genre_ids: resolved.genre_ids || (resolved.genres || []).map(genre => genre.id), catalogCategory: type, redeflix: redeIds.includes(value), superflix: superIds.includes(value) };
             } catch {}
           }
           return null;
@@ -167,8 +167,9 @@ export default function Home() {
           else unique.set(key, { ...unique.get(key), ...item, streambetter: unique.get(key).streambetter || item.streambetter, redeflix: unique.get(key).redeflix || item.redeflix, superflix: unique.get(key).superflix || item.superflix });
         }
         setPopular([...unique.values()]);
-        setTrending([]);
-        setTopRated([]);
+        const rankedItems = [...unique.values()].sort((a, b) => Number(b.vote_average || 0) - Number(a.vote_average || 0));
+        setTrending(rankedItems.slice(0, 20));
+        setTopRated(rankedItems.slice(0, 20));
         const combinedGenres = new Map([...(movieGenresResponse?.genres || []), ...(tvGenresResponse?.genres || [])].map(item => [item.id, item]));
         setGenres([...combinedGenres.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
         return;
@@ -351,9 +352,14 @@ export default function Home() {
     } catch (e) { console.error(e); }
   }
 
-  const filtered = useMemo(() => genre
-    ? popular.filter(item => item.genre_ids?.includes(Number(genre)))
-    : popular, [popular, genre]);
+  const filtered = useMemo(() => {
+    if (!genre) return popular;
+    const selectedGenreId = Number(genre);
+    return popular.filter(item => {
+      const ids = Array.isArray(item.genre_ids) ? item.genre_ids : Array.isArray(item.genres) ? item.genres.map(entry => Number(entry.id)) : [];
+      return ids.includes(selectedGenreId);
+    });
+  }, [popular, genre]);
 
   function cards(items) {
     if (!items.length) return <p className="muted">Nenhum título encontrado.</p>;
