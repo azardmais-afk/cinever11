@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-const BASE = "https://superflixapi.boats";
+const HOSTS = ["https://superflixapi.monster", "https://superflixapi.baby", "https://superflixapi.beer", "https://superflixapi.sbs", "https://superflixapi.pro", "https://superflixapi.boats"];
 
 export async function GET(request, context) {
   try {
@@ -12,7 +12,6 @@ export async function GET(request, context) {
     }
 
     const incoming = new URL(request.url);
-    const target = new URL("/lista", BASE);
     const configs = {
       channels: { category: "canais", format: "json" },
       movies: { category: "filme", type: "imdb", format: "json" },
@@ -20,30 +19,51 @@ export async function GET(request, context) {
       anime: { category: "animes", format: "json" },
       dorama: { category: "dorama", format: "json" }
     };
-    for (const [key, value] of Object.entries(configs[category])) target.searchParams.set(key, value);
+    const params = new URLSearchParams(configs[category]);
     for (const key of ["q", "genre", "limit"]) {
       const value = incoming.searchParams.get(key);
-      if (value) target.searchParams.set(key, value.slice(0, key === "q" ? 80 : 30));
+      if (value) params.set(key, value.slice(0, key === "q" ? 80 : 30));
     }
 
-    const response = await fetch(target.toString(), {
-      headers: { Accept: "application/json, text/plain, */*", "User-Agent": "Mozilla/5.0 (compatible; Smartflix/1.0)", Referer: "https://superflixapi.boats/" },
-      redirect: "follow",
-      cache: "no-store"
-    });
-    const body = await response.text();
-    if (!response.ok) {
-      return NextResponse.json({ error: "Falha ao consultar SuperFlix.", upstreamStatus: response.status, detail: body.slice(0, 300) }, { status: 502 });
+    let lastError = null;
+    for (const host of HOSTS) {
+      const target = new URL("/lista", host);
+      target.search = params.toString();
+      try {
+        const response = await fetch(target.toString(), {
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+            Referer: host + "/canais"
+          },
+          redirect: "follow",
+          cache: "no-store",
+          signal: AbortSignal.timeout(9000)
+        });
+        const body = await response.text();
+        if (!response.ok) {
+          lastError = { host, status: response.status, detail: body.slice(0, 180) };
+          continue;
+        }
+        let data;
+        try {
+          data = JSON.parse(body);
+        } catch {
+          lastError = { host, status: response.status, detail: "Resposta não é JSON." };
+          continue;
+        }
+        return NextResponse.json(data, {
+          headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300", "X-SuperFlix-Host": new URL(response.url || target).host }
+        });
+      } catch (error) {
+        lastError = { host, detail: error?.message || "Falha de conexão" };
+      }
     }
-    let data;
-    try {
-      data = JSON.parse(body);
-    } catch {
-      return NextResponse.json({ error: "A SuperFlix não retornou JSON válido.", detail: body.slice(0, 300) }, { status: 502 });
-    }
-    return NextResponse.json(data, {
-      headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" }
-    });
+    return NextResponse.json({
+      error: "Não foi possível consultar a lista da SuperFlix em nenhum domínio disponível.",
+      tried: HOSTS.map(host => new URL(host).host),
+      lastError
+    }, { status: 502 });
   } catch (error) {
     return NextResponse.json({ error: "Erro ao consultar canais da SuperFlix.", detail: error?.message || "Erro desconhecido" }, { status: 502 });
   }
