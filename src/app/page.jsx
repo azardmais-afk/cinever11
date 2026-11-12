@@ -78,29 +78,16 @@ export default function Home() {
       const params = new URLSearchParams({ limit: "100" });
       if (q.trim()) params.set("q", q.trim());
       if (g) params.set("genre", g);
-      const [superResponse, betterResponse] = await Promise.all([
-        fetch(`/api/superflix/catalog/channels?${params.toString()}`),
-        fetch(`/api/streambetter/api/channels?${new URLSearchParams({ limit: "100", ...(q.trim() ? { q: q.trim() } : {}), ...(g ? { category: g } : {}) }).toString()}`)
-      ]);
-      const superPayload = superResponse.ok ? await superResponse.json() : [];
-      const betterPayload = betterResponse.ok ? await betterResponse.json() : null;
-      const superRows = normalizeChannels(superPayload);
-      const betterRows = (betterPayload?.channels || []).map((item, index) => {
-        const name = item.name || `Canal ${index + 1}`;
-        const slug = item.slug || name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        return { id: `sb-${item.id || slug}`, name, genre: Array.isArray(item.categories) ? item.categories.map(String).join(", ") : "", logo: item.image || "", stream: "", slug, streambetter: true };
-      });
-      const combined = new Map();
-      for (const channel of [...superRows, ...betterRows]) {
-        const key = channel.name.toLocaleLowerCase("pt-BR");
-        const previous = combined.get(key);
-        combined.set(key, previous ? { ...previous, ...channel, stream: previous.stream || channel.stream, logo: previous.logo || channel.logo, streambetter: previous.streambetter || channel.streambetter, slug: previous.slug || channel.slug } : channel);
-      }
-      if (!superResponse.ok && !betterResponse.ok) throw new Error("As fontes de canais não responderam");
-      setChannels([...combined.values()]);
+      const response = await fetch(`/api/superflix/catalog/channels?${params.toString()}`);
+      if (!response.ok) throw new Error(`SuperFlix respondeu HTTP ${response.status}`);
+      const payload = await response.json();
+      const rows = normalizeChannels(payload);
+      if (!rows.length) throw new Error("A SuperFlix não retornou canais para esta consulta.");
+      setChannels(rows);
     } catch (e) {
-      console.error(e);
-      setChannelError("Não foi possível carregar os canais. Tente novamente.");
+      console.error("Erro ao carregar canais SuperFlix:", e);
+      setChannels([]);
+      setChannelError("Não foi possível carregar os canais da SuperFlix. Tente novamente.");
     } finally {
       setChannelLoading(false);
     }
@@ -444,7 +431,7 @@ export default function Home() {
     </nav>
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
-    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="kind-switch player-options channel-player-options"><button className={channelPlayerSource === "superflix" ? "active" : ""} onClick={() => setChannelPlayerSource("superflix")}>Player 1</button><button className={channelPlayerSource === "streambetter" ? "active" : ""} onClick={() => setChannelPlayerSource("streambetter")}>Player 2</button></div><div className="embed-player">{channelPlayerSource === "streambetter" ? <iframe src={`https://streambetter.shop/canal/${selectedChannel.slug || selectedChannel.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : selectedChannel.stream ? (/\\.(m3u8|mp4)(\\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">Este canal não possui uma fonte Player 1.</p>}</div><p className="muted">Escolha o player disponível para este canal.</p></div></article></div>}
+    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.stream ? (/\.(m3u8|mp4)(\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">A SuperFlix não informou o link de reprodução deste canal.</p>}</div><p className="muted">Transmissão fornecida pela SuperFlix.</p></div></article></div>}
     {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}>
       <article className="modal" onClick={e => e.stopPropagation()}>
         <button className="close" onClick={() => setSelected(null)} aria-label="Fechar">×</button>
