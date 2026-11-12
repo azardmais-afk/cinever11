@@ -7,7 +7,7 @@ export async function GET(request, context) {
   try {
     const params = await context.params;
     const path = (params?.path || []).join("/");
-    const allowed = new Set(["api/channels", "api/titles", "api/titles/ids", "api/recents/movies", "api/recents/series"]);
+    const allowed = new Set(["api/channels", "api/titles", "api/titles/ids", "api/animes", "api/doramas", "api/recents/movies", "api/recents/series"]);
     if (!allowed.has(path)) {
       return NextResponse.json({ error: "Rota StreamBetter não permitida." }, { status: 404 });
     }
