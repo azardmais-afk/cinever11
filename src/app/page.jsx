@@ -116,10 +116,6 @@ export default function Home() {
     setLoading(true);
     setError("");
     try {
-  async function loadCatalog(type = kind) {
-    setLoading(true);
-    setError("");
-    try {
       if (type === "anime" || type === "dorama") {
         const response = await fetch("/api/streambetter/api/" + type + "?page=1&limit=100");
         if (!response.ok) throw new Error("StreamBetter " + type + ": HTTP " + response.status);
