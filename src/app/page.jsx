@@ -38,6 +38,7 @@ export default function Home() {
   const [channelLoading, setChannelLoading] = useState(false);
   const [channelError, setChannelError] = useState("");
   const [selectedChannel, setSelectedChannel] = useState(null);
+  const [channelPlayerSource, setChannelPlayerSource] = useState("superflix");
 
   function extractIds(payload) {
     const found = [];
@@ -64,7 +65,9 @@ export default function Home() {
       name: item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`,
       genre: item.category || item.genre || item.genero || item.categoria || "",
       logo: item.logo_url || item.logo || item.logoUrl || item.image || item.poster || item.icon || "",
-      stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || ""
+      stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || "",
+      streambetter: Boolean(item.streambetter),
+      slug: item.slug || ""
     })).filter(item => item.name);
   }
 
@@ -75,10 +78,26 @@ export default function Home() {
       const params = new URLSearchParams({ limit: "100" });
       if (q.trim()) params.set("q", q.trim());
       if (g) params.set("genre", g);
-      const response = await fetch(`/api/superflix/catalog/channels?${params.toString()}`);
-      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
-      const payload = await response.json();
-      setChannels(normalizeChannels(payload));
+      const [superResponse, betterResponse] = await Promise.all([
+        fetch(`/api/superflix/catalog/channels?${params.toString()}`),
+        fetch(`/api/streambetter/api/channels?${new URLSearchParams({ limit: "100", ...(q.trim() ? { q: q.trim() } : {}), ...(g ? { category: g } : {}) }).toString()}`)
+      ]);
+      const superPayload = superResponse.ok ? await superResponse.json() : [];
+      const betterPayload = betterResponse.ok ? await betterResponse.json() : null;
+      const superRows = normalizeChannels(superPayload);
+      const betterRows = (betterPayload?.channels || []).map((item, index) => {
+        const name = item.name || `Canal ${index + 1}`;
+        const slug = item.slug || name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        return { id: `sb-${item.id || slug}`, name, genre: Array.isArray(item.categories) ? item.categories.map(String).join(", ") : "", logo: item.image || "", stream: "", slug, streambetter: true };
+      });
+      const combined = new Map();
+      for (const channel of [...superRows, ...betterRows]) {
+        const key = channel.name.toLocaleLowerCase("pt-BR");
+        const previous = combined.get(key);
+        combined.set(key, previous ? { ...previous, ...channel, stream: previous.stream || channel.stream, logo: previous.logo || channel.logo, streambetter: previous.streambetter || channel.streambetter, slug: previous.slug || channel.slug } : channel);
+      }
+      if (!superResponse.ok && !betterResponse.ok) throw new Error("As fontes de canais não responderam");
+      setChannels([...combined.values()]);
     } catch (e) {
       console.error(e);
       setChannelError("Não foi possível carregar os canais da SuperFlix. Tente novamente.");
@@ -116,6 +135,21 @@ export default function Home() {
           freeItems = (raw?.items || []).map(item => ({ id: Number(item.id_tmdb), name: item.nome, title: item.nome, first_air_date: String(item.ano || ""), media_type: "tv", overview: "", redeflix: true, redeflixSeasons: item.temporadas || {} })).filter(item => item.id);
         }
       } catch (freeError) { console.warn("RedeFlix gratuita indisponível", freeError); }
+      let streamBetterItems = [];
+      try {
+        const response = await fetch(`/api/streambetter/api/titles?type=${type === "movie" ? "movie" : "tv"}&limit=30`);
+        if (response.ok) {
+          const payload = await response.json();
+          const titles = (payload?.titles || []).filter(item => item.tmdb_id).slice(0, 24);
+          const found = await Promise.all(titles.map(async title => {
+            try {
+              const item = await api(`${type === "movie" ? "movie" : "tv"}/${title.tmdb_id}?language=pt-BR`);
+              return { ...item, media_type: type, streambetter: true };
+            } catch { return null; }
+          }));
+          streamBetterItems = found.filter(Boolean);
+        }
+      } catch (streamBetterError) { console.warn("Catálogo StreamBetter indisponível", streamBetterError); }
       let superItems = [];
       try {
         const categories = type === "movie" ? ["movies"] : ["series", "anime", "dorama"];
@@ -145,12 +179,12 @@ export default function Home() {
           superItems = found.filter(Boolean);
         }
       } catch (superError) { console.warn("Catálogo SuperFlix indisponível", superError); }
-      const merged = [...(p.results || []), ...freeItems, ...superItems];
+      const merged = [...(p.results || []), ...freeItems, ...superItems, ...streamBetterItems];
       const unique = new Map();
       for (const item of merged) {
         const key = `${item.media_type || type}-${item.id}`;
         if (!unique.has(key)) unique.set(key, item);
-        else unique.set(key, { ...unique.get(key), ...item, superflix: unique.get(key).superflix || item.superflix, superflixImdbId: unique.get(key).superflixImdbId || item.superflixImdbId, redeflix: unique.get(key).redeflix || item.redeflix });
+        else unique.set(key, { ...unique.get(key), ...item, superflix: unique.get(key).superflix || item.superflix, superflixImdbId: unique.get(key).superflixImdbId || item.superflixImdbId, redeflix: unique.get(key).redeflix || item.redeflix, streambetter: unique.get(key).streambetter || item.streambetter });
       }
       setPopular([...unique.values()]);
       setTrending(t.results || []);
@@ -346,7 +380,7 @@ export default function Home() {
     </nav>
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
-    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.stream ? (/\\.(m3u8|mp4)(\\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">A lista retornou o canal, mas não informou um link de reprodução.</p>}</div><p className="muted">Transmissão fornecida pela SuperFlix. A disponibilidade depende da fonte do canal.</p></div></article></div>}
+    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="kind-switch player-options channel-player-options"><button className={channelPlayerSource === "superflix" ? "active" : ""} onClick={() => setChannelPlayerSource("superflix")}>Player 1</button><button className={channelPlayerSource === "streambetter" ? "active" : ""} onClick={() => setChannelPlayerSource("streambetter")}>Player 2</button></div><div className="embed-player">{channelPlayerSource === "streambetter" ? <iframe src={`https://streambetter.shop/canal/${selectedChannel.slug || selectedChannel.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : selectedChannel.stream ? (/\\.(m3u8|mp4)(\\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">Este canal não possui uma fonte Player 1.</p>}</div><p className="muted">Escolha o player disponível para este canal.</p></div></article></div>}
     {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}>
       <article className="modal" onClick={e => e.stopPropagation()}>
         <button className="close" onClick={() => setSelected(null)} aria-label="Fechar">×</button>
@@ -356,12 +390,12 @@ export default function Home() {
         <div className="modal-body">
           <section className="embed-section">
             <h3>Assistir agora</h3>
-            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2</button>{selected.superflix && <button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3</button>}<button className={playerSource === "megaembed" ? "active" : ""} onClick={() => setPlayerSource("megaembed")}>Player 4</button></div>
-            {selected.media_type === "tv" && (playerSource === "redeflix" || playerSource === "megaembed") && <div className="season-list episode-selectors"><label>Temporada <select value={redeflixEpisode.season} onChange={e => setRedeflixEpisode(v => ({ ...v, season: Number(e.target.value), episode: 1 }))}>{Object.keys(selected.redeflixSeasons || Object.fromEntries((details?.seasons || []).filter(item => item.season_number > 0).map(item => [item.season_number, item.episode_count]))).map(s => <option key={s} value={s}>{s}</option>)}</select></label><label>Episódio <select value={redeflixEpisode.episode} onChange={e => setRedeflixEpisode(v => ({ ...v, episode: Number(e.target.value) }))}>{Array.from({ length: Math.min(100, Math.max(1, Number((details?.seasons || []).find(item => item.season_number === redeflixEpisode.season)?.episode_count || selected.redeflixSeasons?.[redeflixEpisode.season] || 30)) ) }, (_, index) => index + 1).map(number => <option key={number} value={number}>{number}</option>)}</select></label></div>}
+            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2</button>{selected.superflix && <button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3</button>}<button className={playerSource === "megaembed" ? "active" : ""} onClick={() => setPlayerSource("megaembed")}>Player 4</button>{selected.streambetter && <button className={playerSource === "streambetter" ? "active" : ""} onClick={() => setPlayerSource("streambetter")}>Player 5</button>}</div>
+            {selected.media_type === "tv" && (playerSource === "redeflix" || playerSource === "megaembed" || playerSource === "streambetter") && <div className="season-list episode-selectors"><label>Temporada <select value={redeflixEpisode.season} onChange={e => setRedeflixEpisode(v => ({ ...v, season: Number(e.target.value), episode: 1 }))}>{Object.keys(selected.redeflixSeasons || Object.fromEntries((details?.seasons || []).filter(item => item.season_number > 0).map(item => [item.season_number, item.episode_count]))).map(s => <option key={s} value={s}>{s}</option>)}</select></label><label>Episódio <select value={redeflixEpisode.episode} onChange={e => setRedeflixEpisode(v => ({ ...v, episode: Number(e.target.value) }))}>{Array.from({ length: Math.min(100, Math.max(1, Number((details?.seasons || []).find(item => item.season_number === redeflixEpisode.season)?.episode_count || selected.redeflixSeasons?.[redeflixEpisode.season] || 30)) ) }, (_, index) => index + 1).map(number => <option key={number} value={number}>{number}</option>)}</select></label></div>}
             {playerSource === "megaembed" && <div className="season-list domain-selector"><label>Opção de reprodução <select value={megaDomain} onChange={e => setMegaDomain(e.target.value)}>{megaDomains.map((domain, index) => <option key={domain} value={domain}>Opção {index + 1}</option>)}</select></label></div>}
             <div className="embed-player">
               <iframe
-                src={playerSource === "megaembed" ? `https://${megaDomain}/embed/${selected.id}${selected.media_type === "tv" ? `/${redeflixEpisode.season}/${redeflixEpisode.episode}` : ""}` : playerSource === "superflix" ? (selected.media_type === "tv" ? `https://superflixapi.boats/serie/${selected.id}` : `https://superflixapi.boats/filme/${selected.superflixImdbId || selected.id}`) : playerSource === "redeflix" ? (selected.media_type === "tv" ? `https://redeflixapi.click/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://redeflixapi.click/filme/${selected.id}`) : (selected.media_type === "tv" ? `https://myembed.biz/serie/${selected.id}` : `https://myembed.biz/filme/${selected.id}`)}
+                src={playerSource === "streambetter" ? (selected.media_type === "tv" ? `https://streambetter.shop/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://streambetter.shop/filme/${selected.id}`) : playerSource === "megaembed" ? `https://${megaDomain}/embed/${selected.id}${selected.media_type === "tv" ? `/${redeflixEpisode.season}/${redeflixEpisode.episode}` : ""}` : playerSource === "superflix" ? (selected.media_type === "tv" ? `https://superflixapi.boats/serie/${selected.id}` : `https://superflixapi.boats/filme/${selected.superflixImdbId || selected.id}`) : playerSource === "redeflix" ? (selected.media_type === "tv" ? `https://redeflixapi.click/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://redeflixapi.click/filme/${selected.id}`) : (selected.media_type === "tv" ? `https://myembed.biz/serie/${selected.id}` : `https://myembed.biz/filme/${selected.id}`)}
                 title={`Player de ${selected.title || selected.name}`}
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                 allowFullScreen
