@@ -176,6 +176,20 @@ export default function Home() {
           <div className="modal-title"><p className="eyebrow">{selected.media_type === "tv" ? "DETALHES DA SÉRIE" : "DETALHES DO FILME"}</p><h2>{selected.title || selected.name}</h2><p className="modal-stats">★ {score(selected.vote_average)}　·　{year(selected.release_date || selected.first_air_date)}　·　{details?.runtime ? `${details.runtime} min` : details?.number_of_seasons ? `${details.number_of_seasons} temporadas` : " "}</p></div>
         </div>
         <div className="modal-body">
+          <section className="embed-section">
+            <h3>Assistir agora</h3>
+            <div className="embed-player">
+              <iframe
+                src={selected.media_type === "tv" ? `https://myembed.biz/serie/${selected.id}` : `https://myembed.biz/filme/${selected.id}`}
+                title={`Player de ${selected.title || selected.name}`}
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+            <p className="muted">Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo.</p>
+          </section>
           <p>{details?.overview || selected.overview || "Sinopse não disponível."}</p>
           {details?.genres?.length > 0 && <div className="chips">{details.genres.map(g => <span key={g.id}>{g.name}</span>)}</div>}
           {selected.media_type === "tv" && details?.seasons?.length > 0 && <div className="episode-panel"><h3>Temporadas e episódios</h3><div className="season-list">{details.seasons.filter(s => s.season_number >= 0).map(s => <button key={s.id} className={season === s.season_number ? "active" : ""} onClick={() => loadSeason(selected.id, s.season_number)}>{s.name}</button>)}</div>{episodes.length > 0 && <div className="episode-list">{episodes.map(ep => <div className="episode" key={ep.id}><strong>{ep.episode_number}. {ep.name}</strong><span>{ep.overview || "Sinopse não disponível."}</span></div>)}</div>}</div>}
