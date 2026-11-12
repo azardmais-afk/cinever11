@@ -7,14 +7,20 @@ export async function GET(request, context) {
   try {
     const routeParams = await context.params;
     const [resource, category] = routeParams?.path || [];
-    if (resource !== "catalog" || category !== "channels") {
+    if (resource !== "catalog" || !["channels", "movies", "series", "anime", "dorama"].includes(category)) {
       return NextResponse.json({ error: "Rota SuperFlix não encontrada.", path: routeParams?.path || [] }, { status: 404 });
     }
 
     const incoming = new URL(request.url);
     const target = new URL("/lista", BASE);
-    target.searchParams.set("category", "canais");
-    target.searchParams.set("format", "json");
+    const configs = {
+      channels: { category: "canais", format: "json" },
+      movies: { category: "filme", type: "imdb", format: "json" },
+      series: { category: "serie", type: "tmdb", order: "asc", format: "json" },
+      anime: { category: "animes", format: "json" },
+      dorama: { category: "dorama", format: "json" }
+    };
+    for (const [key, value] of Object.entries(configs[category])) target.searchParams.set(key, value);
     for (const key of ["q", "genre", "limit"]) {
       const value = incoming.searchParams.get(key);
       if (value) target.searchParams.set(key, value.slice(0, key === "q" ? 80 : 30));
