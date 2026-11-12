@@ -96,17 +96,7 @@ export default function Home() {
         const firstResponse = await fetch(`/api/reidosembeds/channels?${makeParams(1)}`, { cache: "no-store" });
         if (!firstResponse.ok) throw new Error(`Rei dos Embeds respondeu HTTP ${firstResponse.status}`);
         const firstPayload = await firstResponse.json();
-        const firstRows = normalizeChannels(firstPayload);
-        const totalPages = 1;
-        const later = await Promise.all(Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
-          fetch(`/api/streambetter/api/channels?${makeParams(index + 2)}`, { cache: "no-store" })
-            .then(response => response.ok ? response.json() : null).catch(() => null)
-        ));
-        rows = [...firstRows, ...later.flatMap(payload => normalizeChannels(payload))].map(channel => ({
-          ...channel,
-          source: "streambetter",
-          slug: channel.slug || channel.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-        }));
+        rows = normalizeChannels(firstPayload).map(channel => ({ ...channel, source: "reidosembeds" }));
       }
       const unique = new Map(rows.map(channel => [String(channel.id || channel.slug || channel.name).toLowerCase(), channel]));
       rows = [...unique.values()];
@@ -115,7 +105,7 @@ export default function Home() {
     } catch (e) {
       console.error(`Erro ao carregar canais de ${server}:`, e);
       setChannels([]);
-      setChannelError(`${server === "superflix" ? "SuperFlix" : "StreamBetter"}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
+      setChannelError(`${server === "superflix" ? "SuperFlix" : "Rei dos Embeds"}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
     } finally {
       setChannelLoading(false);
     }
@@ -459,7 +449,7 @@ export default function Home() {
     </nav>
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
-    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.stream ? (/\.(m3u8|mp4)(\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">A SuperFlix não informou o link de reprodução deste canal.</p>}</div><p className="muted">Transmissão fornecida por {selectedChannel.source === "reidosembeds" ? "Rei dos Embeds" : "SuperFlix"}.</p></div></article></div>}
+    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.stream ? (/\.(m3u8|mp4)(\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">Este canal não possui um link de reprodução disponível.</p>}</div><p className="muted">Transmissão fornecida por {selectedChannel.source === "reidosembeds" ? "Rei dos Embeds" : "SuperFlix"}.</p></div></article></div>}
     {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}>
       <article className="modal" onClick={e => e.stopPropagation()}>
         <button className="close" onClick={() => setSelected(null)} aria-label="Fechar">×</button>
