@@ -9,3 +9,21 @@
 /* Player selectors: keep every source visible on mobile */
 .player-options{display:flex;flex-wrap:wrap;overflow:visible;gap:8px;padding:0 0 14px;width:100%;}
 .player-options button{flex:1 1 145px;min-width:0;white-space:normal;text-align:center;}
+
+/* TV Online */
+.topbar nav button{background:transparent;border:0;color:#c2c0c7;font-size:13px;cursor:pointer;padding:6px 0}
+.topbar nav button:hover,.topbar nav button.nav-active{color:#fff}
+.tv-filters{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px}
+.tv-filters input,.tv-filters select{background:#17171d;border:1px solid #303039;border-radius:8px;color:#eee;padding:12px 14px;min-width:170px;flex:1}
+.tv-filters select option{background:#17171d}
+.channel-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.channel-card{min-width:0;display:flex;flex-direction:column;align-items:center;gap:9px;background:#15151b;border:1px solid #292932;border-radius:10px;color:#f5f5f7;padding:16px 10px;cursor:pointer}
+.channel-card:hover{border-color:#e5093f;transform:translateY(-2px)}
+.channel-logo{width:76px;height:58px;display:grid;place-items:center;background:#0a0a0e;border-radius:8px;overflow:hidden;color:#e5093f;font-weight:800}
+.channel-logo img{width:100%;height:100%;object-fit:contain}
+.channel-card strong{font-size:12px;text-align:center}
+.channel-card small{font-size:10px;color:#92929d}
+.channel-modal .embed-player video{width:100%;height:100%;background:#000}
+.channel-modal .embed-player iframe{width:100%;height:100%;border:0}
+@media(max-width:850px){.channel-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.topbar nav button{font-size:11px}.channel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tv-filters input,.tv-filters select{width:100%;flex-basis:100%}.tv-filters .primary-btn{justify-content:center}}
