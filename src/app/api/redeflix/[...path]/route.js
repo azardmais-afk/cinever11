@@ -3,9 +3,10 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 const BASE = "https://redeflixapi.click";
 
-export async function GET(_request, { params }) {
+export async function GET(_request, context) {
   try {
-    const parts = params.path || [];
+    const params = await context.params;
+    const parts = params?.path || [];
     const [resource, type] = parts;
     const paths = {
       movies: "/list-movie-ids.txt",
