@@ -130,3 +130,11 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
 .mobile-dock>button{visibility:visible!important;opacity:1!important;display:flex!important}
 .mobile-dock>button .dock-icon{font-size:22px;line-height:1.1}
 .mobile-dock>button>span:last-child{font-size:clamp(8px,2.45vw,11px)!important;white-space:nowrap}
+
+/* Neutral labels for player, episode and alternate-domain selectors */
+.player-options button{font-size:15px;min-height:68px}
+.episode-selectors{display:grid;grid-template-columns:minmax(100px,.7fr) minmax(130px,1.3fr);gap:14px;align-items:end;overflow:visible}
+.episode-selectors label,.domain-selector label{display:flex;flex-direction:column;gap:7px;color:#d6d6dc;font-size:14px}
+.episode-selectors select,.domain-selector select{width:100%;min-height:46px;background:#1b1b22;color:#fff;border:1px solid #393943;border-radius:8px;padding:10px 12px;font-size:15px}
+.domain-selector{margin-top:12px}
+@media(max-width:650px){.episode-selectors{grid-template-columns:1fr 1fr}.episode-selectors select,.domain-selector select{min-height:48px}}
