@@ -138,3 +138,10 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
 .episode-selectors select,.domain-selector select{width:100%;min-height:46px;background:#1b1b22;color:#fff;border:1px solid #393943;border-radius:8px;padding:10px 12px;font-size:15px}
 .domain-selector{margin-top:12px}
 @media(max-width:650px){.episode-selectors{grid-template-columns:1fr 1fr}.episode-selectors select,.domain-selector select{min-height:48px}}
+
+
+/* TV Online: independent server selector (TV section only) */
+.channel-server-switch{display:flex;gap:10px;margin:18px 0 14px;flex-wrap:wrap}
+.channel-server-switch button{appearance:none;border:1px solid #303039;border-radius:999px;background:#17171d;color:#bdbdc5;padding:10px 22px;font-size:14px;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.channel-server-switch button.active{background:#e50914;border-color:#e50914;color:#fff;font-weight:700}
+.channel-server-switch button:focus-visible{outline:2px solid #fff;outline-offset:2px}
