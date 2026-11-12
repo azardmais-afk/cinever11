@@ -100,7 +100,7 @@ export default function Home() {
       setChannels([...combined.values()]);
     } catch (e) {
       console.error(e);
-      setChannelError("Não foi possível carregar os canais da SuperFlix. Tente novamente.");
+      setChannelError("Não foi possível carregar os canais. Tente novamente.");
     } finally {
       setChannelLoading(false);
     }
