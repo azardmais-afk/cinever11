@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const IMG = "https://image.tmdb.org/t/p/";
-const poster = (path, size = "w500") => path ? `${IMG}${size}${path}` : "";
+const poster = (path, size = "w500") => path ? (String(path).startsWith("http") ? path : `${IMG}${size}${path}`) : "";
 const year = (date) => date ? date.slice(0, 4) : "—";
 const score = (n) => Number(n || 0).toFixed(1);
 
@@ -26,6 +26,8 @@ export default function Home() {
   const [episodes, setEpisodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [playerSource, setPlayerSource] = useState("embedmovies");
+  const [redeflixEpisode, setRedeflixEpisode] = useState({ season: 1, episode: 1 });
 
   async function api(path) {
     const response = await fetch(`/api/tmdb/${path}`);
@@ -188,7 +190,7 @@ export default function Home() {
                 referrerPolicy="strict-origin-when-cross-origin"
               />
             </div>
-            <p className="muted">Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo.</p>
+            <p className="muted">{playerSource === "redeflix" ? "Player público gratuito da RedeFlixApi. A disponibilidade depende do serviço externo." : "Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo."}</p>
           </section>
           <p>{details?.overview || selected.overview || "Sinopse não disponível."}</p>
           {details?.genres?.length > 0 && <div className="chips">{details.genres.map(g => <span key={g.id}>{g.name}</span>)}</div>}
