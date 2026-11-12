@@ -3,21 +3,21 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 const BASE = "https://superflixapi.boats";
 
-const endpoints = {
-  movies: "/lista?category=filme&type=imdb&format=json",
-  series: "/lista?category=serie&type=tmdb&order=asc&format=json",
-  anime: "/lista?category=animes&format=json",
-  dorama: "/lista?category=dorama&format=json",
-  channels: "/lista?category=canais&format=json"
-};
-
-export async function GET(_request, { params }) {
+export async function GET(request, { params }) {
   try {
     const [resource, category] = params.path || [];
-    if (resource !== "catalog" || !endpoints[category]) {
+    if (resource !== "catalog" || category !== "channels") {
       return NextResponse.json({ error: "Rota SuperFlix não encontrada." }, { status: 404 });
     }
-    const response = await fetch(BASE + endpoints[category], {
+    const incoming = new URL(request.url);
+    const target = new URL("/lista", BASE);
+    target.searchParams.set("category", "canais");
+    target.searchParams.set("format", "json");
+    for (const key of ["q", "genre", "limit"]) {
+      const value = incoming.searchParams.get(key);
+      if (value) target.searchParams.set(key, value.slice(0, key === "q" ? 80 : 30));
+    }
+    const response = await fetch(target, {
       headers: { Accept: "application/json" },
       cache: "no-store"
     });
@@ -28,10 +28,10 @@ export async function GET(_request, { params }) {
     return new Response(body, {
       headers: {
         "Content-Type": response.headers.get("content-type") || "application/json; charset=utf-8",
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300"
       }
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message || "Erro ao consultar SuperFlix." }, { status: 502 });
+    return NextResponse.json({ error: error.message || "Erro ao consultar canais." }, { status: 502 });
   }
 }
