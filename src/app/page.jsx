@@ -60,47 +60,62 @@ export default function Home() {
 
 
   function normalizeChannels(payload) {
-    const rows = Array.isArray(payload) ? payload : (payload?.data || payload?.items || payload?.results || payload?.canais || payload?.channels || []);
-    return rows.filter(item => item && (item.is_active === undefined || item.is_active === true)).map((item, index) => ({
-      id: item.id ?? item.channel_id ?? item.slug ?? index,
-      name: item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`,
-      genre: item.category || item.genre || item.genero || item.categoria || "",
-      logo: item.logo_url || item.logo || item.logoUrl || item.image || item.poster || item.icon || "",
-      stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || "",
-      streambetter: Boolean(item.streambetter),
-      slug: item.slug || ""
-    })).filter(item => item.name);
+    const candidate = Array.isArray(payload) ? payload : (payload?.data || payload?.items || payload?.results || payload?.canais || payload?.channels || []);
+    const rows = Array.isArray(candidate) ? candidate : (candidate?.channels || candidate?.items || candidate?.results || []);
+    return rows.filter(item => item && (item.is_active === undefined || item.is_active === true)).map((item, index) => {
+      const name = item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`;
+      const slug = item.slug || name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      return {
+        id: item.id ?? item.channel_id ?? slug ?? index,
+        name,
+        genre: item.category || item.genre || item.genero || item.categoria || (Array.isArray(item.categories) ? item.categories.join(", ") : ""),
+        logo: item.logo_url || item.logo || item.logoUrl || item.image || item.poster || item.icon || "",
+        stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || "",
+        slug
+      };
+    }).filter(item => item.name);
   }
 
   async function loadChannels(q = channelQuery, g = channelGenre, server = channelServer) {
     setChannelLoading(true);
     setChannelError("");
     try {
-      const params = new URLSearchParams({ limit: "100" });
-      if (q.trim()) params.set("q", q.trim());
-      if (g) params.set(server === "superflix" ? "genre" : "category", g);
+      const makeParams = page => {
+        const params = new URLSearchParams({ limit: "100", page: String(page) });
+        if (q.trim()) params.set("q", q.trim());
+        if (g) params.set(server === "superflix" ? "genre" : "category", g);
+        return params.toString();
+      };
       let rows = [];
       if (server === "superflix") {
-        const response = await fetch(`/api/superflix/catalog/channels?${params.toString()}`);
+        const response = await fetch(`/api/superflix/catalog/channels?${makeParams(1)}`, { cache: "no-store" });
         if (!response.ok) throw new Error(`SuperFlix respondeu HTTP ${response.status}`);
-        rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "superflix" }));
-      } else {
-        const response = await fetch(`/api/streambetter/api/channels?${params.toString()}`);
-        if (!response.ok) throw new Error(`StreamBetter respondeu HTTP ${response.status}`);
         const payload = await response.json();
-        const sourceRows = Array.isArray(payload) ? payload : (payload?.channels || payload?.data || payload?.items || payload?.results || []);
-        rows = sourceRows.map((item, index) => {
-          const name = item.name || item.nome || item.title || `Canal ${index + 1}`;
-          const slug = item.slug || name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-          return { id: item.id ?? `sb-${slug}`, name, genre: Array.isArray(item.categories) ? item.categories.join(", ") : (item.category || item.genre || ""), logo: item.image || item.logo || item.logo_url || "", stream: "", slug, source: "streambetter" };
-        });
+        rows = normalizeChannels(payload).map(channel => ({ ...channel, source: "superflix" }));
+      } else {
+        const firstResponse = await fetch(`/api/streambetter/api/channels?${makeParams(1)}`, { cache: "no-store" });
+        if (!firstResponse.ok) throw new Error(`StreamBetter respondeu HTTP ${firstResponse.status}`);
+        const firstPayload = await firstResponse.json();
+        const firstRows = normalizeChannels(firstPayload);
+        const totalPages = Math.min(10, Number(firstPayload?.pagination?.totalPages || 1));
+        const later = await Promise.all(Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) =>
+          fetch(`/api/streambetter/api/channels?${makeParams(index + 2)}`, { cache: "no-store" })
+            .then(response => response.ok ? response.json() : null).catch(() => null)
+        ));
+        rows = [...firstRows, ...later.flatMap(payload => normalizeChannels(payload))].map(channel => ({
+          ...channel,
+          source: "streambetter",
+          slug: channel.slug || channel.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+        }));
       }
-      if (!rows.length) throw new Error("Nenhum canal foi retornado por este servidor.");
+      const unique = new Map(rows.map(channel => [String(channel.id || channel.slug || channel.name).toLowerCase(), channel]));
+      rows = [...unique.values()];
+      if (!rows.length) throw new Error(`A API ${server === "superflix" ? "SuperFlix" : "StreamBetter"} respondeu, mas não retornou canais em um formato reconhecido.`);
       setChannels(rows);
     } catch (e) {
       console.error(`Erro ao carregar canais de ${server}:`, e);
       setChannels([]);
-      setChannelError(server === "superflix" ? "Não foi possível carregar os canais da SuperFlix. Tente novamente." : "Não foi possível carregar os canais da StreamBetter. Tente novamente.");
+      setChannelError(`${server === "superflix" ? "SuperFlix" : "StreamBetter"}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
     } finally {
       setChannelLoading(false);
     }
