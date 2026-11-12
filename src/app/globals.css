@@ -124,3 +124,9 @@ body{background:#080808}
 body{padding-bottom:calc(66px + env(safe-area-inset-bottom))!important}
 footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
 @media(max-width:420px){.mobile-dock button{font-size:20px}.mobile-dock button span{font-size:9px}}
+
+/* Explicit six-item bottom menu */
+.mobile-dock{grid-template-columns:repeat(6,minmax(0,1fr))!important}
+.mobile-dock>button{visibility:visible!important;opacity:1!important;display:flex!important}
+.mobile-dock>button .dock-icon{font-size:22px;line-height:1.1}
+.mobile-dock>button>span:last-child{font-size:clamp(8px,2.45vw,11px)!important;white-space:nowrap}
