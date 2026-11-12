@@ -116,6 +116,25 @@ export default function Home() {
     setLoading(true);
     setError("");
     try {
+  async function loadCatalog(type = kind) {
+    setLoading(true);
+    setError("");
+    try {
+      if (type === "anime" || type === "dorama") {
+        const response = await fetch("/api/streambetter/api/" + type + "?page=1&limit=100");
+        if (!response.ok) throw new Error("StreamBetter " + type + ": HTTP " + response.status);
+        const payload = await response.json();
+        const categoryItems = (payload?.titles || []).map(item => {
+          const id = Number(item.tmdb_id);
+          const mediaType = item.type === "movie" ? "movie" : "tv";
+          return { id, title: item.title || item.name || "Título sem nome", name: item.title || item.name || "Título sem nome", poster_path: item.poster_path || "", overview: item.overview || "", release_date: item.release_date || "", first_air_date: item.first_air_date || "", vote_average: Number(item.vote_average || 0), media_type: mediaType, catalogCategory: type, streambetter: true };
+        }).filter(item => item.id);
+        setPopular(categoryItems);
+        setTrending([]);
+        setTopRated([]);
+        setGenres([]);
+        return;
+      }
       const [p, t, top, g] = await Promise.all([
         api(`${type}/popular?language=pt-BR&page=1`),
         api(`trending/${type}/week?language=pt-BR`),
@@ -360,7 +379,7 @@ export default function Home() {
         <div className="catalog-stat"><strong>{catalogCounts.dorama === null ? "…" : catalogCounts.dorama.toLocaleString("pt-BR")}</strong><span>Doramas</span></div>
       </section>
 
-        <div className="kind-switch"><button className={kind === "movie" ? "active" : ""} onClick={() => { setKind("movie"); setGenre(""); }}>Filmes</button><button className={kind === "tv" ? "active" : ""} onClick={() => { setKind("tv"); setGenre(""); }}>Séries</button></div>
+        <div className="kind-switch"><button className={kind === "movie" ? "active" : ""} onClick={() => { setKind("movie"); setGenre(""); }}>Filmes</button><button className={kind === "tv" ? "active" : ""} onClick={() => { setKind("tv"); setGenre(""); }}>Séries</button><button className={kind === "anime" ? "active" : ""} onClick={() => { setKind("anime"); setGenre(""); }}>Animes</button><button className={kind === "dorama" ? "active" : ""} onClick={() => { setKind("dorama"); setGenre(""); }}>Doramas</button></div>
         <div className="genre-list"><button className={!genre ? "active" : ""} onClick={() => setGenre("")}>Todos</button>{genres.map(g => <button key={g.id} className={String(g.id) === genre ? "active" : ""} onClick={() => setGenre(String(g.id))}>{g.name}</button>)}</div>
         {error ? <p className="error-message">{error}</p> : loading ? <p className="muted">Carregando...</p> : cards(filtered)}
       </section>
@@ -376,8 +395,8 @@ export default function Home() {
       <button type="button" className={activeTab === "tv" ? "active" : ""} onClick={() => { setActiveTab("tv"); loadChannels("", ""); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span className="dock-icon">▣</span><span>TV Online</span></button>
       <button type="button" className={activeTab === "home" && kind === "movie" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("movie"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">▣</span><span>Filmes</span></button>
       <button type="button" className={activeTab === "home" && kind === "tv" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">▤</span><span>Séries</span></button>
-      <button type="button" onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">✦</span><span>Animes</span></button>
-      <button type="button" onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">♡</span><span>Doramas</span></button>
+      <button type="button" className={activeTab === "home" && kind === "anime" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("anime"); setGenre(""); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">✦</span><span>Animes</span></button>
+      <button type="button" className={activeTab === "home" && kind === "dorama" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("dorama"); setGenre(""); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">♡</span><span>Doramas</span></button>
     </nav>
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
