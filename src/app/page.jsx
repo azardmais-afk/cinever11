@@ -149,10 +149,13 @@ export default function Home() {
     setSeason(null);
     setEpisodes([]);
     try {
-      const [data, watch] = await Promise.all([
+      const [data, watch, external] = await Promise.all([
         api(`${type}/${item.id}?language=pt-BR&append_to_response=credits,videos`),
-        api(`${type}/${item.id}/watch/providers`)
+        api(`${type}/${item.id}/watch/providers`),
+        api(`${type}/${item.id}/external_ids`).catch(() => ({}))
       ]);
+      const superflixImdbId = type === "movie" ? (external.imdb_id || item.superflixImdbId || "") : "";
+      setSelected(current => ({ ...current, superflix: type === "tv" || Boolean(superflixImdbId) || Boolean(item.superflix), superflixImdbId }));
       setDetails(data);
       const video = (data.videos?.results || []).find(v => v.site === "YouTube" && v.type === "Trailer")
         || (data.videos?.results || []).find(v => v.site === "YouTube");
