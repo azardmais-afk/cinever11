@@ -108,7 +108,6 @@ export default function Home() {
           slug: channel.slug || channel.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
         }));
       }
-      }
       const unique = new Map(rows.map(channel => [String(channel.id || channel.slug || channel.name).toLowerCase(), channel]));
       rows = [...unique.values()];
       if (!rows.length) throw new Error(`A API ${server === "superflix" ? "SuperFlix" : "StreamBetter"} respondeu, mas não retornou canais em um formato reconhecido.`);
@@ -116,7 +115,7 @@ export default function Home() {
     } catch (e) {
       console.error(`Erro ao carregar canais de ${server}:`, e);
       setChannels([]);
-      setChannelError(`${server === "superflix" ? "SuperFlix" : "Rei dos Embeds"}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
+      setChannelError(`${server === "superflix" ? "SuperFlix" : "StreamBetter"}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
     } finally {
       setChannelLoading(false);
     }
