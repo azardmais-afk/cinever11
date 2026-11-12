@@ -29,6 +29,23 @@ export default function Home() {
   const [playerSource, setPlayerSource] = useState("embedmovies");
   const [redeflixEpisode, setRedeflixEpisode] = useState({ season: 1, episode: 1 });
 
+  function extractIds(payload) {
+    const found = [];
+    const visit = value => {
+      if (typeof value === "string" || typeof value === "number") {
+        const id = String(value).trim();
+        if (/^(tt\\d+|\\d+)$/.test(id)) found.push(id);
+      } else if (Array.isArray(value)) value.forEach(visit);
+      else if (value && typeof value === "object") {
+        for (const key of ["id", "imdb_id", "tmdb_id", "imdb", "tmdb", "items", "results", "data", "ids", "titles"]) {
+          if (value[key] !== undefined) visit(value[key]);
+        }
+      }
+    };
+    visit(payload);
+    return [...new Set(found)];
+  }
+
   async function api(path) {
     const response = await fetch(`/api/tmdb/${path}`);
     if (!response.ok) throw new Error("Falha ao consultar o catálogo");
@@ -57,7 +74,39 @@ export default function Home() {
           freeItems = (raw?.items || []).map(item => ({ id: Number(item.id_tmdb), name: item.nome, title: item.nome, first_air_date: String(item.ano || ""), media_type: "tv", overview: "", redeflix: true, redeflixSeasons: item.temporadas || {} })).filter(item => item.id);
         }
       } catch (freeError) { console.warn("RedeFlix gratuita indisponível", freeError); }
-      setPopular([...(p.results || []), ...freeItems.filter(extra => !(p.results || []).some(item => String(item.id) === String(extra.id)))]);
+      let superItems = [];
+      try {
+        const category = type === "movie" ? "movies" : "series";
+        const response = await fetch(`/api/superflix/catalog/${category}`);
+        const payload = response.ok ? await response.json() : [];
+        const ids = extractIds(payload).slice(0, 30);
+        if (type === "movie") {
+          const found = await Promise.all(ids.filter(id => id.startsWith("tt")).map(async imdbId => {
+            try {
+              const match = await api(`find/${imdbId}?external_source=imdb_id&language=pt-BR`);
+              const item = match.movie_results?.[0];
+              return item ? { ...item, media_type: "movie", superflixImdbId: imdbId, superflix: true } : null;
+            } catch { return null; }
+          }));
+          superItems = found.filter(Boolean);
+        } else {
+          const found = await Promise.all(ids.filter(id => /^\\d+$/.test(id)).map(async id => {
+            try {
+              const item = await api(`tv/${id}?language=pt-BR`);
+              return { ...item, media_type: "tv", superflix: true };
+            } catch { return null; }
+          }));
+          superItems = found.filter(Boolean);
+        }
+      } catch (superError) { console.warn("Catálogo SuperFlix indisponível", superError); }
+      const merged = [...(p.results || []), ...freeItems, ...superItems];
+      const unique = new Map();
+      for (const item of merged) {
+        const key = `${item.media_type || type}-${item.id}`;
+        if (!unique.has(key)) unique.set(key, item);
+        else unique.set(key, { ...unique.get(key), ...item, superflix: unique.get(key).superflix || item.superflix, superflixImdbId: unique.get(key).superflixImdbId || item.superflixImdbId, redeflix: unique.get(key).redeflix || item.redeflix });
+      }
+      setPopular([...unique.values()]);
       setTrending(t.results || []);
       setTopRated(top.results || []);
       setGenres(g.genres || []);
@@ -194,11 +243,11 @@ export default function Home() {
         <div className="modal-body">
           <section className="embed-section">
             <h3>Assistir agora</h3>
-            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1 · EmbedMovies</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2 · RedeFlix grátis</button></div>
+            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1 · EmbedMovies</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2 · RedeFlix grátis</button><button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3 · SuperFlix</button></div>
             {selected.media_type === "tv" && playerSource === "redeflix" && <div className="season-list"><label>Temporada <select value={redeflixEpisode.season} onChange={e => setRedeflixEpisode(v => ({ ...v, season: Number(e.target.value) }))}>{Object.keys(selected.redeflixSeasons || Object.fromEntries((details?.seasons || []).map(s => [s.season_number, s.episode_count]))).map(s => <option key={s} value={s}>{s}</option>)}</select></label><label>Episódio <input type="number" min="1" value={redeflixEpisode.episode} onChange={e => setRedeflixEpisode(v => ({ ...v, episode: Math.max(1, Number(e.target.value)) }))} /></label></div>}
             <div className="embed-player">
               <iframe
-                src={playerSource === "redeflix" ? (selected.media_type === "tv" ? `https://redeflixapi.click/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://redeflixapi.click/filme/${selected.id}`) : (selected.media_type === "tv" ? `https://myembed.biz/serie/${selected.id}` : `https://myembed.biz/filme/${selected.id}`)}
+                src={playerSource === "superflix" ? (selected.media_type === "tv" ? `https://superflixapi.boats/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://superflixapi.boats/filme/${selected.superflixImdbId || selected.id}`) : playerSource === "redeflix" ? (selected.media_type === "tv" ? `https://redeflixapi.click/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://redeflixapi.click/filme/${selected.id}`) : (selected.media_type === "tv" ? `https://myembed.biz/serie/${selected.id}` : `https://myembed.biz/filme/${selected.id}`)}
                 title={`Player de ${selected.title || selected.name}`}
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                 allowFullScreen
@@ -206,7 +255,7 @@ export default function Home() {
                 referrerPolicy="strict-origin-when-cross-origin"
               />
             </div>
-            <p className="muted">{playerSource === "redeflix" ? "Player público gratuito da RedeFlixApi. A disponibilidade depende do serviço externo." : "Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo."}</p>
+            <p className="muted">{playerSource === "superflix" ? "Player incorporado da SuperFlix. A disponibilidade depende do serviço externo." : playerSource === "redeflix" ? "Player público gratuito da RedeFlixApi. A disponibilidade depende do serviço externo." : "Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo."}</p>
           </section>
           <p>{details?.overview || selected.overview || "Sinopse não disponível."}</p>
           {details?.genres?.length > 0 && <div className="chips">{details.genres.map(g => <span key={g.id}>{g.name}</span>)}</div>}
