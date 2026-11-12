@@ -245,7 +245,7 @@ export default function Home() {
   return <main>
     <header className="topbar">
       <a className="brand" href="#"><img className="brand-logo" src="/smartflix-logo.png" alt="Smartflix" /></a>
-      <nav><button className={activeTab === "home" ? "nav-active" : ""} onClick={() => setActiveTab("home")}>Início</button><button onClick={() => { setActiveTab("tv"); loadChannels("", ""); }}>TV Online</button><a href="#tendencias" onClick={() => setActiveTab("home")}>Em alta</a><a href="#catalogo" onClick={() => setActiveTab("home")}>Catálogo</a></nav>
+      <nav><button className={activeTab === "home" ? "nav-active" : ""} onClick={() => setActiveTab("home")}>Início</button><button className={activeTab === "tv" ? "nav-active" : ""} onClick={() => { setActiveTab("tv"); loadChannels("", ""); }}>TV Online</button><a href="#tendencias" onClick={() => setActiveTab("home")}>Em alta</a><a href="#catalogo" onClick={() => setActiveTab("home")}>Catálogo</a></nav>
       <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar filmes e séries..." aria-label="Buscar filmes e séries" />{query && <button onClick={() => setQuery("")} aria-label="Limpar busca">×</button>}</div>
     </header>
 
