@@ -396,7 +396,7 @@ export default function Home() {
   return <main>
     <header className="topbar">
       <a className="brand" href="#"><img className="brand-logo" src="/smartflix-logo.png" alt="Smartflix" /></a>
-      <nav><button className={activeTab === "home" ? "nav-active" : ""} onClick={() => setActiveTab("home")}>Início</button><button className={activeTab === "tv" ? "nav-active" : ""} onClick={() => { setActiveTab("tv"); loadChannels("", ""); }}>TV Online</button><a href="#tendencias" onClick={() => setActiveTab("home")}>Em alta</a><a href="#catalogo" onClick={() => setActiveTab("home")}>Catálogo</a></nav>
+      <nav><button className={activeTab === "home" ? "nav-active" : ""} onClick={() => setActiveTab("home")}>Início</button><button className={activeTab === "tv" ? "nav-active" : ""} onClick={() => { setActiveTab("tv"); setChannelServer("superflix"); loadChannels("", "", "superflix"); }}>TV Online</button><a href="#tendencias" onClick={() => setActiveTab("home")}>Em alta</a><a href="#catalogo" onClick={() => setActiveTab("home")}>Catálogo</a></nav>
       <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar filmes e séries..." aria-label="Buscar filmes e séries" />{query && <button onClick={() => setQuery("")} aria-label="Limpar busca">×</button>}</div>
     </header>
 
@@ -451,7 +451,7 @@ export default function Home() {
 
     <nav className="mobile-dock" aria-label="Navegação principal">
       <button type="button" className={activeTab === "home" && kind === "movie" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("movie"); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span className="dock-icon">⌂</span><span>Início</span></button>
-      <button type="button" className={activeTab === "tv" ? "active" : ""} onClick={() => { setActiveTab("tv"); loadChannels("", ""); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span className="dock-icon">▣</span><span>TV Online</span></button>
+      <button type="button" className={activeTab === "tv" ? "active" : ""} onClick={() => { setActiveTab("tv"); setChannelServer("superflix"); loadChannels("", "", "superflix"); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span className="dock-icon">▣</span><span>TV Online</span></button>
       <button type="button" className={activeTab === "home" && kind === "movie" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("movie"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">▣</span><span>Filmes</span></button>
       <button type="button" className={activeTab === "home" && kind === "tv" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("tv"); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">▤</span><span>Séries</span></button>
       <button type="button" className={activeTab === "home" && kind === "anime" ? "active" : ""} onClick={() => { setActiveTab("home"); setKind("anime"); setGenre(""); document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth" }); }}><span className="dock-icon">✦</span><span>Animes</span></button>
