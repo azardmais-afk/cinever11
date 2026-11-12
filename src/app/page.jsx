@@ -285,11 +285,13 @@ export default function Home() {
         return type === "text" ? await response.text() : await response.json();
       } catch { return null; }
     };
-    const textIds = value => String(value || "").split(/\\s+/).map(x => x.trim()).filter(x => /^\\d+$/.test(x));
-    const idsFrom = value => extractIds(value);
-    const streamIds = (payload, key) => Array.isArray(payload?.ids?.[key]) ? payload.ids[key].map(String) : [];
+    const countText = value => new Set(String(value || "").split(/\s+/).map(x => x.trim()).filter(x => /^\d+$/.test(x))).size;
+    const countAvailable = (...values) => {
+      const ids = values.flatMap(value => extractIds(value));
+      return new Set(ids).size;
+    };
     (async () => {
-      const [redeMovies, redeSeries, redeAnime, redeDorama, superMovies, superSeries, superAnime, superDorama, streamIdsPayload] = await Promise.all([
+      const [redeMovies, redeSeries, redeAnime, redeDorama, superMovies, superSeries, superAnime, superDorama, streamBetterIds] = await Promise.all([
         safe("/api/redeflix/catalog/movies", "text"),
         safe("/api/redeflix/catalog/series"),
         safe("/api/redeflix/catalog/anime", "text"),
@@ -300,13 +302,12 @@ export default function Home() {
         safe("/api/superflix/catalog/dorama"),
         safe("/api/streambetter/api/titles/ids")
       ]);
-      const redeSeriesIds = Array.isArray(redeSeries?.items) ? redeSeries.items.map(x => String(x.id_tmdb || "")).filter(Boolean) : [];
-      const unionCount = (...groups) => new Set(groups.flat().filter(Boolean).map(String)).size;
+      const seriesIds = Array.isArray(redeSeries?.items) ? redeSeries.items.map(x => String(x.id_tmdb || "")).filter(Boolean) : [];
       const next = {
-        movies: unionCount(textIds(redeMovies), idsFrom(superMovies), streamIds(streamIdsPayload, "movie")),
-        series: unionCount(redeSeriesIds, idsFrom(superSeries), streamIds(streamIdsPayload, "tv")),
-        anime: unionCount(textIds(redeAnime), idsFrom(superAnime), streamIds(streamIdsPayload, "anime")),
-        dorama: unionCount(textIds(redeDorama), idsFrom(superDorama), streamIds(streamIdsPayload, "dorama"))
+        movies: countText(redeMovies) + extractIds(superMovies).length + Number(streamBetterIds?.counts?.movie || 0),
+        series: new Set([...seriesIds, ...extractIds(superSeries)]).size + Number(streamBetterIds?.counts?.tv || 0),
+        anime: countAvailable(redeAnime, superAnime) + Number(streamBetterIds?.counts?.anime || 0),
+        dorama: countAvailable(redeDorama, superDorama) + Number(streamBetterIds?.counts?.dorama || 0)
       };
       if (active) setCatalogCounts(next);
     })();
