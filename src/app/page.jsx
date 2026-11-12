@@ -27,6 +27,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [playerSource, setPlayerSource] = useState("embedmovies");
+  const [megaDomain, setMegaDomain] = useState("mgeb.space");
+  const megaDomains = ["mgeb.space", "mgeb.lat", "mgeb.casa", "mgeb.quest"];
   const [redeflixEpisode, setRedeflixEpisode] = useState({ season: 1, episode: 1 });
   const [activeTab, setActiveTab] = useState("home");
   const [channels, setChannels] = useState([]);
@@ -289,8 +291,8 @@ export default function Home() {
         <div className="modal-body">
           <section className="embed-section">
             <h3>Assistir agora</h3>
-            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1 · EmbedMovies</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2 · RedeFlix grátis</button>{selected.superflix && <button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3 · SuperFlix</button>}</div>
-            {selected.media_type === "tv" && playerSource === "redeflix" && <div className="season-list"><label>Temporada <select value={redeflixEpisode.season} onChange={e => setRedeflixEpisode(v => ({ ...v, season: Number(e.target.value) }))}>{Object.keys(selected.redeflixSeasons || Object.fromEntries((details?.seasons || []).map(s => [s.season_number, s.episode_count]))).map(s => <option key={s} value={s}>{s}</option>)}</select></label><label>Episódio <input type="number" min="1" value={redeflixEpisode.episode} onChange={e => setRedeflixEpisode(v => ({ ...v, episode: Math.max(1, Number(e.target.value)) }))} /></label></div>}
+            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1 · EmbedMovies</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2 · RedeFlix grátis</button>{selected.superflix && <button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3 · SuperFlix</button>}<button className={playerSource === "megaembed" ? "active" : ""} onClick={() => setPlayerSource("megaembed")}>Player 4 · MegaEmbed</button></div>
+            {selected.media_type === "tv" && (playerSource === "redeflix" || playerSource === "megaembed") && <div className="season-list"><label>Temporada <select value={redeflixEpisode.season} onChange={e => setRedeflixEpisode(v => ({ ...v, season: Number(e.target.value) }))}>{Object.keys(selected.redeflixSeasons || Object.fromEntries((details?.seasons || []).map(s => [s.season_number, s.episode_count]))).map(s => <option key={s} value={s}>{s}</option>)}</select></label><label>Episódio <input type="number" min="1" value={redeflixEpisode.episode} onChange={e => setRedeflixEpisode(v => ({ ...v, episode: Math.max(1, Number(e.target.value)) }))} /></label></div>}
             <div className="embed-player">
               <iframe
                 src={playerSource === "superflix" ? (selected.media_type === "tv" ? `https://superflixapi.boats/serie/${selected.id}` : `https://superflixapi.boats/filme/${selected.superflixImdbId || selected.id}`) : playerSource === "redeflix" ? (selected.media_type === "tv" ? `https://redeflixapi.click/serie/${selected.id}/${redeflixEpisode.season}/${redeflixEpisode.episode}` : `https://redeflixapi.click/filme/${selected.id}`) : (selected.media_type === "tv" ? `https://myembed.biz/serie/${selected.id}` : `https://myembed.biz/filme/${selected.id}`)}
@@ -301,7 +303,7 @@ export default function Home() {
                 referrerPolicy="strict-origin-when-cross-origin"
               />
             </div>
-            <p className="muted">{playerSource === "superflix" ? "Player incorporado da SuperFlix. A disponibilidade depende do serviço externo." : playerSource === "redeflix" ? "Player público gratuito da RedeFlixApi. A disponibilidade depende do serviço externo." : "Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo."}</p>
+            <p className="muted">{playerSource === "megaembed" ? "Player MegaEmbed. Se este domínio não carregar, escolha outro na lista acima." : playerSource === "superflix" ? "Player incorporado da SuperFlix. A disponibilidade depende do serviço externo." : playerSource === "redeflix" ? "Player público gratuito da RedeFlixApi. A disponibilidade depende do serviço externo." : "Player incorporado do EmbedMovies. A disponibilidade depende do serviço externo."}</p>
           </section>
           <p>{details?.overview || selected.overview || "Sinopse não disponível."}</p>
           {details?.genres?.length > 0 && <div className="chips">{details.genres.map(g => <span key={g.id}>{g.name}</span>)}</div>}
