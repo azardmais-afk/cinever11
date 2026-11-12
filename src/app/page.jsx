@@ -105,13 +105,13 @@ export default function Home() {
       ]);
       // Contagens dos catálogos completos, separadas por fonte e sem estimativas.
       try {
-        const [movieIdsText, seriesRaw, animeRaw, doramaRaw, superMovieRaw, superSeriesRaw] = await Promise.all([
+        const [movieIdsText, seriesRaw, animeRaw, doramaRaw, movieTotals, tvTotals] = await Promise.all([
           fetch("/api/redeflix/catalog/movies").then(r => r.ok ? r.text() : ""),
           fetch("/api/redeflix/catalog/series").then(r => r.ok ? r.json() : null),
           fetch("/api/redeflix/catalog/anime").then(r => r.ok ? r.text() : ""),
           fetch("/api/redeflix/catalog/dorama").then(r => r.ok ? r.text() : ""),
-          fetch("/api/superflix/catalog/movies").then(r => r.ok ? r.json() : []),
-          fetch("/api/superflix/catalog/series").then(r => r.ok ? r.json() : [])
+          api("movie/popular?language=pt-BR&page=1"),
+          api("tv/popular?language=pt-BR&page=1")
         ]);
         const countText = value => new Set(String(value || "").split(/\\s+/).map(x => x.trim()).filter(x => /^\\d+$/.test(x))).size;
         const countSeries = Array.isArray(seriesRaw?.items) ? new Set(seriesRaw.items.map(x => String(x.id_tmdb || "")).filter(Boolean)).size : 0;
@@ -119,8 +119,8 @@ export default function Home() {
         const animePayload = await fetch("/api/superflix/catalog/anime").then(r => r.ok ? r.json() : []);
         const doramaPayload = await fetch("/api/superflix/catalog/dorama").then(r => r.ok ? r.json() : []);
         setCatalogCounts({
-          movies: Math.max(Number(p.total_results || 0), movieSourceCount),
-          series: Math.max(Number(t.total_results || 0), countSeries),
+          movies: Math.max(Number(movieTotals.total_results || 0), movieSourceCount),
+          series: Math.max(Number(tvTotals.total_results || 0), countSeries),
           anime: new Set([...extractIds(animeRaw), ...extractIds(animePayload)]).size,
           dorama: new Set([...extractIds(doramaRaw), ...extractIds(doramaPayload)]).size
         });
