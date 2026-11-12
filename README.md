@@ -1,22 +1,33 @@
-# CINEVERSE
+# SMARTFLIX
 
-Catálogo de filmes responsivo usando a API do TMDB, com pesquisa, filtros por gênero,
-detalhes, elenco e links para trailers no YouTube.
+Catálogo responsivo de filmes, séries e animes com busca, gêneros, detalhes, elenco e player externo EmbedMovies.
 
-## Requisitos
-- Node.js 20.9 ou superior
-- Token de leitura da API do TMDB
+## Configuração necessária no Cloudflare
+
+Em Workers & Pages → seu Worker → Settings → Variables and Secrets, crie ou confirme:
+
+- **Type:** Variable (ou Secret, recomendado)
+- **Name:** `TMDB_API_READ_TOKEN`
+- **Value:** seu token Bearer de leitura da API do TMDB
+
+Marque Production e, se usar previews, Previews. Salve com **Add variable and deploy**. Não coloque o token no código, no GitHub ou em arquivos públicos.
+
+## Como funciona
+
+- O catálogo e as informações vêm da API oficial do TMDB.
+- O player é incorporado via iframe do EmbedMovies (`myembed.biz`): filmes usam o IMDb ID quando disponível e o ID TMDB como alternativa; séries usam o ID TMDB e permitem selecionar temporada/episódio.
+- A disponibilidade do vídeo depende do serviço externo. O Smartflix não hospeda vídeos nem garante que todo título tenha player disponível.
+
+## Deploy automático
+
+O repositório conectado ao Cloudflare deve estar configurado para acompanhar a branch `main`. Cada commit enviado ao GitHub dispara um novo build/deploy. Build command: `npx opennextjs-cloudflare build`; deploy command: `npx opennextjs-cloudflare deploy`.
 
 ## Rodar localmente
-1. Instale as dependências: `npm install`
-2. Copie `.env.example` para `.env.local`
-3. Preencha `TMDB_API_READ_TOKEN` com seu Bearer token do TMDB
-4. Rode `npm run dev` e abra http://localhost:3000
 
-## Deploy na Vercel
-- Importe este projeto como Next.js.
-- Configure `TMDB_API_READ_TOKEN` nas Environment Variables (Production, Preview e Development).
-- Deixe Root Directory vazio (raiz do projeto) e Output Directory em branco/automático.
-- Faça o deploy.
+1. `npm install`
+2. Configure `TMDB_API_READ_TOKEN` no ambiente local.
+3. `npm run dev`
 
-O token é utilizado exclusivamente pela rota de servidor `src/app/api/tmdb/[...path]/route.js`.
+## Créditos
+
+Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB. O player externo é fornecido por EmbedMovies. Respeite os direitos autorais e os termos dos serviços usados.
