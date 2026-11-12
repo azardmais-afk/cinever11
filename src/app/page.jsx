@@ -117,7 +117,7 @@ export default function Home() {
     setError("");
     try {
       if (type === "anime" || type === "dorama") {
-        const response = await fetch("/api/streambetter/api/" + type + "?page=1&limit=100");
+        const response = await fetch("/api/streambetter/api/" + (type === "anime" ? "animes" : "doramas") + "?page=1&limit=100");
         if (!response.ok) throw new Error("StreamBetter " + type + ": HTTP " + response.status);
         const payload = await response.json();
         const categoryItems = (payload?.titles || []).map(item => {
