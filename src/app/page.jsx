@@ -44,7 +44,7 @@ export default function Home() {
     const visit = value => {
       if (typeof value === "string" || typeof value === "number") {
         const id = String(value).trim();
-        if (/^(tt\\d+|\\d+)$/.test(id)) found.push(id);
+        if (/^(tt\d+|\d+)$/.test(id)) found.push(id);
       } else if (Array.isArray(value)) value.forEach(visit);
       else if (value && typeof value === "object") {
         for (const key of ["id", "imdb_id", "tmdb_id", "imdb", "tmdb", "items", "results", "data", "ids", "titles"]) {
@@ -113,7 +113,7 @@ export default function Home() {
           api("movie/popular?language=pt-BR&page=1"),
           api("tv/popular?language=pt-BR&page=1")
         ]);
-        const countText = value => new Set(String(value || "").split(/\\s+/).map(x => x.trim()).filter(x => /^\\d+$/.test(x))).size;
+        const countText = value => new Set(String(value || "").split(/\\s+/).map(x => x.trim()).filter(x => /^\d+$/.test(x))).size;
         const countSeries = Array.isArray(seriesRaw?.items) ? new Set(seriesRaw.items.map(x => String(x.id_tmdb || "")).filter(Boolean)).size : 0;
         const movieSourceCount = countText(movieIdsText);
         const animePayload = await fetch("/api/superflix/catalog/anime").then(r => r.ok ? r.json() : []);
@@ -157,7 +157,7 @@ export default function Home() {
           }));
           superItems = found.filter(Boolean);
         } else {
-          const found = await Promise.all(ids.filter(id => /^\\d+$/.test(id)).map(async id => {
+          const found = await Promise.all(ids.filter(id => /^\d+$/.test(id)).map(async id => {
             try {
               const item = await api(`tv/${id}?language=pt-BR`);
               return { ...item, media_type: "tv", superflix: true };
