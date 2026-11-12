@@ -112,7 +112,8 @@ export default function Home() {
         if (!response.ok) throw new Error(`Rei dos Embeds respondeu HTTP ${response.status}`);
         rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "reidosembeds" }));
       } else if (server === "reidoscanais") {
-        const response = await fetch("/api/reidoscanais/channels" + (g ? "?category=" + encodeURIComponent(g) : ""), { cache: "no-store" });
+        const categoryName = ({ esportes: "Esportes", noticias: "Notícias", filmes: "Filmes", infantil: "Infantil", abertos: "Canais Abertos" })[g] || g;
+        const response = await fetch("/api/reidoscanais/channels" + (categoryName ? "?category=" + encodeURIComponent(categoryName) : ""), { cache: "no-store" });
         if (!response.ok) throw new Error(`Rei dos Canais respondeu HTTP ${response.status}`);
         rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "reidoscanais" }));
         if (q.trim()) rows = rows.filter(channel => channel.name.toLowerCase().includes(q.trim().toLowerCase()));
