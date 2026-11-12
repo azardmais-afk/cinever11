@@ -209,7 +209,7 @@ export default function Home() {
     };
     const countText = value => new Set(String(value || "").split(/\s+/).map(x => x.trim()).filter(x => /^\d+$/.test(x))).size;
     (async () => {
-      const [redeMovies, redeSeries, redeAnime, redeDorama, superMovies, superSeries, superAnime, superDorama] = await Promise.all([
+      const [redeMovies, redeSeries, redeAnime, redeDorama, superMovies, superSeries, superAnime, superDorama, streamBetterIds] = await Promise.all([
         safe("/api/redeflix/catalog/movies", "text"),
         safe("/api/redeflix/catalog/series"),
         safe("/api/redeflix/catalog/anime", "text"),
@@ -217,7 +217,8 @@ export default function Home() {
         safe("/api/superflix/catalog/movies"),
         safe("/api/superflix/catalog/series"),
         safe("/api/superflix/catalog/anime"),
-        safe("/api/superflix/catalog/dorama")
+        safe("/api/superflix/catalog/dorama"),
+        safe("/api/streambetter/api/titles/ids")
       ]);
       const seriesIds = Array.isArray(redeSeries?.items) ? redeSeries.items.map(x => String(x.id_tmdb || "")).filter(Boolean) : [];
       const countAvailable = (...values) => {
@@ -225,10 +226,10 @@ export default function Home() {
         return new Set(ids).size;
       };
       const next = {
-        movies: countText(redeMovies) + extractIds(superMovies).length,
-        series: new Set([...seriesIds, ...extractIds(superSeries)]).size,
-        anime: countAvailable(redeAnime, superAnime),
-        dorama: countAvailable(redeDorama, superDorama)
+        movies: countText(redeMovies) + extractIds(superMovies).length + Number(streamBetterIds?.counts?.movie || 0),
+        series: new Set([...seriesIds, ...extractIds(superSeries)]).size + Number(streamBetterIds?.counts?.tv || 0),
+        anime: countAvailable(redeAnime, superAnime) + Number(streamBetterIds?.counts?.anime || 0),
+        dorama: countAvailable(redeDorama, superDorama) + Number(streamBetterIds?.counts?.dorama || 0)
       };
       if (active) setCatalogCounts(next);
     })();
@@ -390,7 +391,7 @@ export default function Home() {
         <div className="modal-body">
           <section className="embed-section">
             <h3>Assistir agora</h3>
-            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2</button>{selected.superflix && <button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3</button>}<button className={playerSource === "megaembed" ? "active" : ""} onClick={() => setPlayerSource("megaembed")}>Player 4</button>{selected.streambetter && <button className={playerSource === "streambetter" ? "active" : ""} onClick={() => setPlayerSource("streambetter")}>Player 5</button>}</div>
+            <div className="kind-switch player-options"><button className={playerSource === "embedmovies" ? "active" : ""} onClick={() => setPlayerSource("embedmovies")}>Player 1</button><button className={playerSource === "redeflix" ? "active" : ""} onClick={() => setPlayerSource("redeflix")}>Player 2</button>{selected.superflix && <button className={playerSource === "superflix" ? "active" : ""} onClick={() => setPlayerSource("superflix")}>Player 3</button>}<button className={playerSource === "megaembed" ? "active" : ""} onClick={() => setPlayerSource("megaembed")}>Player 4</button><button className={playerSource === "streambetter" ? "active" : ""} onClick={() => setPlayerSource("streambetter")}>Player 5</button></div>
             {selected.media_type === "tv" && (playerSource === "redeflix" || playerSource === "megaembed" || playerSource === "streambetter") && <div className="season-list episode-selectors"><label>Temporada <select value={redeflixEpisode.season} onChange={e => setRedeflixEpisode(v => ({ ...v, season: Number(e.target.value), episode: 1 }))}>{Object.keys(selected.redeflixSeasons || Object.fromEntries((details?.seasons || []).filter(item => item.season_number > 0).map(item => [item.season_number, item.episode_count]))).map(s => <option key={s} value={s}>{s}</option>)}</select></label><label>Episódio <select value={redeflixEpisode.episode} onChange={e => setRedeflixEpisode(v => ({ ...v, episode: Number(e.target.value) }))}>{Array.from({ length: Math.min(100, Math.max(1, Number((details?.seasons || []).find(item => item.season_number === redeflixEpisode.season)?.episode_count || selected.redeflixSeasons?.[redeflixEpisode.season] || 30)) ) }, (_, index) => index + 1).map(number => <option key={number} value={number}>{number}</option>)}</select></label></div>}
             {playerSource === "megaembed" && <div className="season-list domain-selector"><label>Opção de reprodução <select value={megaDomain} onChange={e => setMegaDomain(e.target.value)}>{megaDomains.map((domain, index) => <option key={domain} value={domain}>Opção {index + 1}</option>)}</select></label></div>}
             <div className="embed-player">
