@@ -112,3 +112,15 @@ body{background:#080808}
  footer{margin-bottom:64px}
 }
 @media(min-width:651px){.mobile-dock{display:none}}
+
+
+/* Fixed bottom navigation matching the supplied Cineflix reference */
+.topbar nav{display:none!important}
+.mobile-dock{position:fixed!important;z-index:50;left:0;right:0;bottom:0;display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));align-items:stretch;gap:0;padding:8px 2px calc(8px + env(safe-area-inset-bottom));background:rgba(8,8,8,.98);border-top:1px solid #292929;box-shadow:0 -5px 20px rgba(0,0,0,.35);backdrop-filter:blur(14px)}
+.mobile-dock button{appearance:none;-webkit-appearance:none;display:flex;min-width:0;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:3px 0;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:#c9c9c9!important;font-family:Arial,sans-serif;font-size:23px;line-height:1.15;white-space:nowrap;cursor:pointer}
+.mobile-dock button span{font-size:clamp(9px,2.6vw,12px);line-height:1.2;color:inherit}
+.mobile-dock button.active{color:#fff!important;font-weight:700}
+.mobile-dock button:focus-visible{outline:1px solid #aaa;outline-offset:-2px}
+body{padding-bottom:calc(66px + env(safe-area-inset-bottom))!important}
+footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
+@media(max-width:420px){.mobile-dock button{font-size:20px}.mobile-dock button span{font-size:9px}}
