@@ -118,10 +118,12 @@ export default function Home() {
     try {
       if (type === "anime" || type === "dorama") {
         const categoryPath = type === "anime" ? "animes" : "doramas";
-        const [streamResponse, redeflixResponse, superflixResponse] = await Promise.all([
+        const [streamResponse, redeflixResponse, superflixResponse, movieGenresResponse, tvGenresResponse] = await Promise.all([
           fetch(`/api/streambetter/api/${categoryPath}?page=1&limit=100`).catch(() => null),
           fetch(`/api/redeflix/catalog/${type}`).catch(() => null),
-          fetch(`/api/superflix/catalog/${type}`).catch(() => null)
+          fetch(`/api/superflix/catalog/${type}`).catch(() => null),
+          api("genre/movie/list?language=pt-BR").catch(() => ({ genres: [] })),
+          api("genre/tv/list?language=pt-BR").catch(() => ({ genres: [] }))
         ]);
         const streamPayload = streamResponse?.ok ? await streamResponse.json().catch(() => null) : null;
         const redeflixText = redeflixResponse?.ok ? await redeflixResponse.text().catch(() => "") : "";
@@ -167,7 +169,8 @@ export default function Home() {
         setPopular([...unique.values()]);
         setTrending([]);
         setTopRated([]);
-        setGenres([]);
+        const combinedGenres = new Map([...(movieGenresResponse?.genres || []), ...(tvGenresResponse?.genres || [])].map(item => [item.id, item]));
+        setGenres([...combinedGenres.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
         return;
       }
       const [p, t, top, g] = await Promise.all([
@@ -414,7 +417,7 @@ export default function Home() {
         <div className="catalog-stat"><strong>{catalogCounts.dorama === null ? "…" : catalogCounts.dorama.toLocaleString("pt-BR")}</strong><span>Doramas</span></div>
       </section>
 
-        <div className="kind-switch"><button className={kind === "movie" ? "active" : ""} onClick={() => { setKind("movie"); setGenre(""); }}>Filmes</button><button className={kind === "tv" ? "active" : ""} onClick={() => { setKind("tv"); setGenre(""); }}>Séries</button><button className={kind === "anime" ? "active" : ""} onClick={() => { setKind("anime"); setGenre(""); }}>Animes</button><button className={kind === "dorama" ? "active" : ""} onClick={() => { setKind("dorama"); setGenre(""); }}>Doramas</button></div>
+        
         <div className="genre-list"><button className={!genre ? "active" : ""} onClick={() => setGenre("")}>Todos</button>{genres.map(g => <button key={g.id} className={String(g.id) === genre ? "active" : ""} onClick={() => setGenre(String(g.id))}>{g.name}</button>)}</div>
         {error ? <p className="error-message">{error}</p> : loading ? <p className="muted">Carregando...</p> : cards(filtered)}
       </section>
