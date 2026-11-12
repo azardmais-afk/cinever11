@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CINEVERSE — Descubra seu próximo filme",
-  description: "Explore filmes populares, tendências e grandes histórias no CINEVERSE."
+  title: "SMARTFLIX — Seu universo de filmes e séries",
+  description: "Descubra filmes, séries, novidades e grandes histórias no SMARTFLIX."
 };
 
 export default function RootLayout({ children }) {
