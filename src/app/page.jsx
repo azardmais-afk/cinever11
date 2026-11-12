@@ -28,6 +28,13 @@ export default function Home() {
   const [error, setError] = useState("");
   const [playerSource, setPlayerSource] = useState("embedmovies");
   const [redeflixEpisode, setRedeflixEpisode] = useState({ season: 1, episode: 1 });
+  const [activeTab, setActiveTab] = useState("home");
+  const [channels, setChannels] = useState([]);
+  const [channelQuery, setChannelQuery] = useState("");
+  const [channelGenre, setChannelGenre] = useState("");
+  const [channelLoading, setChannelLoading] = useState(false);
+  const [channelError, setChannelError] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState(null);
 
   function extractIds(payload) {
     const found = [];
@@ -44,6 +51,40 @@ export default function Home() {
     };
     visit(payload);
     return [...new Set(found)];
+  }
+
+
+  function normalizeChannels(payload) {
+    const rows = Array.isArray(payload) ? payload : (payload?.items || payload?.results || payload?.data || payload?.canais || payload?.channels || []);
+    return rows.map((item, index) => {
+      if (typeof item === "string") return { id: index, name: item, stream: item, logo: "" };
+      return {
+        id: item.id ?? item.channel_id ?? item.slug ?? index,
+        name: item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`,
+        genre: item.genre || item.genero || item.category || item.categoria || "",
+        logo: item.logo || item.logo_url || item.image || item.poster || item.icon || item.thumbnail || "",
+        stream: item.stream_url || item.stream || item.url_stream || item.url || item.embed_url || item.embed || item.player || item.iframe || ""
+      };
+    }).filter(item => item.name);
+  }
+
+  async function loadChannels(q = channelQuery, g = channelGenre) {
+    setChannelLoading(true);
+    setChannelError("");
+    try {
+      const params = new URLSearchParams({ limit: "100" });
+      if (q.trim()) params.set("q", q.trim());
+      if (g) params.set("genre", g);
+      const response = await fetch(`/api/superflix/catalog/channels?${params.toString()}`);
+      if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+      const payload = await response.json();
+      setChannels(normalizeChannels(payload));
+    } catch (e) {
+      console.error(e);
+      setChannelError("Não foi possível carregar os canais da SuperFlix. Tente novamente.");
+    } finally {
+      setChannelLoading(false);
+    }
   }
 
   async function api(path) {
@@ -204,11 +245,11 @@ export default function Home() {
   return <main>
     <header className="topbar">
       <a className="brand" href="#"><img className="brand-logo" src="/smartflix-logo.png" alt="Smartflix" /></a>
-      <nav><a href="#tendencias">Em alta</a><a href="#catalogo">Catálogo</a><a href="#avaliados">Mais avaliados</a></nav>
+      <nav><button className={activeTab === "home" ? "nav-active" : ""} onClick={() => setActiveTab("home")}>Início</button><button onClick={() => { setActiveTab("tv"); loadChannels("", ""); }}>TV Online</button><a href="#tendencias" onClick={() => setActiveTab("home")}>Em alta</a><a href="#catalogo" onClick={() => setActiveTab("home")}>Catálogo</a></nav>
       <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar filmes e séries..." aria-label="Buscar filmes e séries" />{query && <button onClick={() => setQuery("")} aria-label="Limpar busca">×</button>}</div>
     </header>
 
-    {query.trim() ? <section className="search-results section">
+    {activeTab === "tv" ? <section className="section tv-online" id="tv-online"><div className="section-heading"><div><p className="eyebrow">TRANSMISSÃO AO VIVO</p><h2>TV <em>Online</em></h2></div><span className="section-count">SUPERFLIX</span></div><div className="tv-filters"><input value={channelQuery} onChange={e => setChannelQuery(e.target.value)} onKeyDown={e => { if (e.key === "Enter") loadChannels(); }} placeholder="Buscar canal (ex.: sportv)" /><select value={channelGenre} onChange={e => { setChannelGenre(e.target.value); loadChannels(channelQuery, e.target.value); }}><option value="">Todos os gêneros</option><option value="esportes">Esportes</option><option value="noticias">Notícias</option><option value="filmes">Filmes</option><option value="infantil">Infantil</option><option value="abertos">Canais abertos</option></select><button className="primary-btn" onClick={() => loadChannels()}>Buscar</button></div>{channelLoading ? <p className="muted">Carregando canais...</p> : channelError ? <p className="error-message">{channelError}</p> : channels.length ? <div className="channel-grid">{channels.map(ch => <button className="channel-card" key={ch.id} onClick={() => setSelectedChannel(ch)}><div className="channel-logo">{ch.logo ? <img src={ch.logo} alt="" /> : <span>TV</span>}</div><strong>{ch.name}</strong><small>{ch.genre || "Canal ao vivo"}</small></button>)}</div> : <p className="muted">Nenhum canal encontrado. Toque em Buscar para carregar a lista.</p>}</section> : query.trim() ? <section className="search-results section">
       <div className="section-heading"><div><p className="eyebrow">PESQUISA</p><h2>Resultados para “{query}”</h2></div></div>
       {searching ? <p className="muted">Buscando filmes e séries...</p> : cards(results)}
     </section> : <>
@@ -241,6 +282,7 @@ export default function Home() {
 
     <footer><a className="brand" href="#"><img className="footer-logo" src="/smartflix-logo.png" alt="Smartflix" /></a><span>Informações de filmes e séries fornecidas por TMDB.</span><span>© {new Date().getFullYear()} SMARTFLIX</span></footer>
 
+    {selectedChannel && <div className="modal-backdrop" onClick={() => setSelectedChannel(null)}><article className="modal channel-modal" onClick={e => e.stopPropagation()}><button className="close" onClick={() => setSelectedChannel(null)} aria-label="Fechar">×</button><div className="modal-body"><h2>{selectedChannel.name}</h2><div className="embed-player">{selectedChannel.stream ? (/\\.(m3u8|mp4)(\\?|$)/i.test(selectedChannel.stream) ? <video controls autoPlay playsInline src={selectedChannel.stream} /> : <iframe src={selectedChannel.stream} title={selectedChannel.name} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen />) : <p className="muted">A lista retornou o canal, mas não informou um link de reprodução.</p>}</div><p className="muted">Transmissão fornecida pela SuperFlix. A disponibilidade depende da fonte do canal.</p></div></article></div>}
     {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}>
       <article className="modal" onClick={e => e.stopPropagation()}>
         <button className="close" onClick={() => setSelected(null)} aria-label="Fechar">×</button>
