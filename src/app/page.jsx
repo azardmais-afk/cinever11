@@ -55,17 +55,14 @@ export default function Home() {
 
 
   function normalizeChannels(payload) {
-    const rows = Array.isArray(payload) ? payload : (payload?.items || payload?.results || payload?.data || payload?.canais || payload?.channels || []);
-    return rows.map((item, index) => {
-      if (typeof item === "string") return { id: index, name: item, stream: item, logo: "" };
-      return {
-        id: item.id ?? item.channel_id ?? item.slug ?? index,
-        name: item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`,
-        genre: item.genre || item.genero || item.category || item.categoria || "",
-        logo: item.logo || item.logo_url || item.image || item.poster || item.icon || item.thumbnail || "",
-        stream: item.stream_url || item.stream || item.url_stream || item.url || item.embed_url || item.embed || item.player || item.iframe || ""
-      };
-    }).filter(item => item.name);
+    const rows = Array.isArray(payload) ? payload : (payload?.data || payload?.items || payload?.results || payload?.canais || payload?.channels || []);
+    return rows.filter(item => item && (item.is_active === undefined || item.is_active === true)).map((item, index) => ({
+      id: item.id ?? item.channel_id ?? item.slug ?? index,
+      name: item.name || item.nome || item.title || item.titulo || item.channel || item.canal || `Canal ${index + 1}`,
+      genre: item.category || item.genre || item.genero || item.categoria || "",
+      logo: item.logo_url || item.logo || item.logoUrl || item.image || item.poster || item.icon || "",
+      stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || ""
+    })).filter(item => item.name);
   }
 
   async function loadChannels(q = channelQuery, g = channelGenre) {
