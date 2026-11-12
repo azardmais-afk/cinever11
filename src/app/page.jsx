@@ -119,12 +119,17 @@ export default function Home() {
           const backupResponse = await fetch(`/api/streambetter/api/channels?${new URLSearchParams({ page: "1", limit: "100" })}`, { cache: "no-store" });
           if (!backupResponse.ok) throw new Error(`StreamBetter respondeu HTTP ${backupResponse.status}`);
           const backupPayload = await backupResponse.json();
-          const backupRows = normalizeChannels(backupPayload).map(channel => ({
+          const backupPages = Math.min(20, Number(backupPayload?.pagination?.totalPages || 1));
+          const backupLater = await Promise.all(Array.from({ length: Math.max(0, backupPages - 1) }, (_, index) =>
+            fetch(`/api/streambetter/api/channels?${new URLSearchParams({ page: String(index + 2), limit: "100" })}`, { cache: "no-store" })
+              .then(response => response.ok ? response.json() : null).catch(() => null)
+          ));
+          const backupRows = [...normalizeChannels(backupPayload), ...backupLater.flatMap(payload => normalizeChannels(payload))].map(channel => ({
             ...channel,
             source: "streambetter",
-            slug: channel.slug || channel.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+            slug: channel.slug || channel.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
           }));
-          setChannels(backupRows);
+          setChannels([...new Map(backupRows.map(channel => [String(channel.id || channel.slug || channel.name).toLowerCase(), channel])).values()]);
           setChannelError("");
           console.warn("SuperFlix indisponível; exibindo StreamBetter como contingência.");
         } catch (backupError) {
