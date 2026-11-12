@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge";
 const BASE = "https://superflixapi.boats";
 
-export async function GET(request, { params }) {
+export async function GET(request, context) {
   try {
-    const [resource, category] = params.path || [];
+    const routeParams = await context.params;
+    const [resource, category] = routeParams?.path || [];
     if (resource !== "catalog" || category !== "channels") {
-      return NextResponse.json({ error: "Rota SuperFlix não encontrada." }, { status: 404 });
+      return NextResponse.json({ error: "Rota SuperFlix não encontrada.", path: routeParams?.path || [] }, { status: 404 });
     }
+
     const incoming = new URL(request.url);
     const target = new URL("/lista", BASE);
     target.searchParams.set("category", "canais");
@@ -17,21 +20,25 @@ export async function GET(request, { params }) {
       const value = incoming.searchParams.get(key);
       if (value) target.searchParams.set(key, value.slice(0, key === "q" ? 80 : 30));
     }
-    const response = await fetch(target, {
-      headers: { Accept: "application/json" },
-      cache: "no-store"
+
+    const response = await fetch(target.toString(), {
+      headers: { Accept: "application/json, text/plain, */*" },
+      redirect: "follow"
     });
-    if (!response.ok) {
-      return NextResponse.json({ error: `SuperFlix respondeu HTTP ${response.status}` }, { status: response.status });
-    }
     const body = await response.text();
-    return new Response(body, {
-      headers: {
-        "Content-Type": response.headers.get("content-type") || "application/json; charset=utf-8",
-        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300"
-      }
+    if (!response.ok) {
+      return NextResponse.json({ error: "Falha ao consultar SuperFlix.", upstreamStatus: response.status, detail: body.slice(0, 300) }, { status: 502 });
+    }
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      return NextResponse.json({ error: "A SuperFlix não retornou JSON válido.", detail: body.slice(0, 300) }, { status: 502 });
+    }
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" }
     });
   } catch (error) {
-    return NextResponse.json({ error: error.message || "Erro ao consultar canais." }, { status: 502 });
+    return NextResponse.json({ error: "Erro ao consultar canais da SuperFlix.", detail: error?.message || "Erro desconhecido" }, { status: 502 });
   }
 }
