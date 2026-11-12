@@ -411,7 +411,7 @@ export default function Home() {
     </section> : <>
       {(() => {
         const featured = trending[0] || popular[0];
-        const totalTitles = Object.values(catalogCounts).every(value => value !== null) ? Object.values(catalogCounts).reduce((sum, value) => sum + value, 0) : null;
+        const totalTitles = catalogCounts.movies !== null && catalogCounts.series !== null ? catalogCounts.movies + catalogCounts.series : null;
         return <>
           <section className="hero netflix-hero" style={featured?.backdrop_path ? { backgroundImage: `linear-gradient(90deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.62) 48%,rgba(0,0,0,.12) 100%),linear-gradient(0deg,#080808 0%,transparent 45%),url(${poster(featured.backdrop_path,"w1280")})` } : undefined}>
             <div className="hero-content">
