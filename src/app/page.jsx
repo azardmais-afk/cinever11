@@ -114,8 +114,27 @@ export default function Home() {
       setChannels(rows);
     } catch (e) {
       console.error(`Erro ao carregar canais de ${server}:`, e);
-      setChannels([]);
-      setChannelError(`${server === "superflix" ? "SuperFlix" : "StreamBetter"}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
+      if (server === "superflix") {
+        try {
+          const backupResponse = await fetch(`/api/streambetter/api/channels?${new URLSearchParams({ page: "1", limit: "100" })}`, { cache: "no-store" });
+          if (!backupResponse.ok) throw new Error(`StreamBetter respondeu HTTP ${backupResponse.status}`);
+          const backupPayload = await backupResponse.json();
+          const backupRows = normalizeChannels(backupPayload).map(channel => ({
+            ...channel,
+            source: "streambetter",
+            slug: channel.slug || channel.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+          }));
+          setChannels(backupRows);
+          setChannelError("");
+          console.warn("SuperFlix indisponível; exibindo StreamBetter como contingência.");
+        } catch (backupError) {
+          setChannels([]);
+          setChannelError(`SuperFlix indisponível (${e?.message || "erro 502"}) e StreamBetter não respondeu (${backupError?.message || "erro"}).`);
+        }
+      } else {
+        setChannels([]);
+        setChannelError(`StreamBetter: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
+      }
     } finally {
       setChannelLoading(false);
     }
