@@ -52,3 +52,63 @@ body{background:#080808}
 .movie-meta span{font-size:11px}
 .kind-switch button.active,.genre-list button.active,.primary-btn{background:#e50914;border-color:#e50914}
 @media(max-width:700px){.catalog-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:20px 5vw}.catalog-stats-heading{grid-column:1/-1}.catalog-stat{padding-left:10px}.catalog-stat strong{font-size:20px}.catalog-stat span{font-size:10px}.hero{min-height:490px;padding:82px 7vw 90px}.hero h1{font-size:43px}.movie-card{flex-basis:138px}.section{padding-top:36px}}
+
+
+/* Cineflix-inspired streaming home */
+.netflix-hero{min-height:570px;display:flex;align-items:flex-end;padding:100px 5vw 58px;background-color:#080808;background-size:cover;background-position:center 28%;position:relative}
+.netflix-hero:after{display:none}
+.netflix-hero .hero-content{max-width:650px}
+.netflix-hero .eyebrow{color:#fff;letter-spacing:2.5px;font-size:12px}
+.netflix-hero h1{font:800 clamp(38px,5vw,64px)/1.05 'DM Sans',sans-serif;letter-spacing:-1.8px;max-width:680px;margin:0 0 18px}
+.netflix-hero .hero-copy{font-size:clamp(15px,2vw,20px);line-height:1.45;color:#eee;max-width:620px;margin:0 0 24px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hero-actions{display:flex;flex-wrap:wrap;gap:12px}
+.hero-actions button{font-size:16px;font-weight:800;padding:14px 25px;border-radius:6px;box-shadow:none}
+.hero-actions .hero-watch{background:#fff;color:#111}
+.hero-actions .hero-watch:hover{background:#ddd}
+.secondary-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:6px;background:rgba(109,109,110,.78);color:#fff;padding:14px 22px;cursor:pointer;font-weight:700}
+.secondary-btn:hover{background:rgba(109,109,110,.55)}
+.catalog-total{padding:14px 4vw 8px;color:#c8c8c8;font-size:14px;line-height:1.5}
+.section{padding:28px 4vw 10px}
+.section-heading{margin-bottom:14px}
+.section-heading h2{font:700 23px 'DM Sans',sans-serif;color:#f5f5f5;letter-spacing:-.4px}
+.movie-grid{gap:12px;padding:4px 0 20px}
+.movie-card{flex-basis:clamp(145px,17vw,220px)}
+.poster-wrap{border-radius:5px}
+.movie-card:hover{transform:scale(1.06)}
+.catalog-stats{margin:0 4vw 18px;padding:14px 18px;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #292929;border-radius:8px;background:#111}
+.catalog-stats-heading{grid-column:1/-1}
+.catalog-stats-heading h2{font-size:16px}
+.catalog-stat{border-left:0;padding:8px 0}
+.catalog-stat strong{font-size:23px}
+.topbar{height:66px;padding:0 4vw;gap:30px}
+.topbar nav{gap:22px}
+.topbar nav button,.topbar nav a{font-size:14px}
+@media(max-width:650px){
+ .topbar{height:auto;min-height:66px;padding:10px 5vw;flex-wrap:nowrap;gap:12px}
+ .brand-logo{width:128px;max-height:36px}
+ .topbar nav{display:none}
+ .search{width:auto;flex:1;height:40px;margin-left:auto}
+ .search input{font-size:12px}
+ .netflix-hero{min-height:520px;padding:0 5vw 42px;background-position:center center}
+ .netflix-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#080808 0%,rgba(0,0,0,.25) 55%,rgba(0,0,0,.25) 100%)}
+ .netflix-hero .hero-content{z-index:1}
+ .netflix-hero h1{font-size:38px;line-height:1.08}
+ .netflix-hero .hero-copy{font-size:16px;line-height:1.45;-webkit-line-clamp:3}
+ .hero-actions button{font-size:14px;padding:12px 18px}
+ .catalog-total{padding:10px 4vw 4px;font-size:13px}
+ .section{padding:28px 4vw 8px}
+ .section-heading h2{font-size:21px}
+ .movie-grid{gap:10px}
+ .movie-card{flex-basis:42vw}
+ .catalog-stats{margin:10px 4vw 16px;padding:12px;gap:8px}
+ .catalog-stats-heading h2{font-size:15px}
+ .catalog-stat strong{font-size:19px}
+ .catalog-stat span{font-size:10px}
+ .mobile-dock{position:fixed;z-index:8;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);padding:8px 4px calc(8px + env(safe-area-inset-bottom));background:rgba(8,8,8,.97);border-top:1px solid #303030;backdrop-filter:blur(14px)}
+ .mobile-dock button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:#c9c9c9;font-size:21px;padding:2px;cursor:pointer}
+ .mobile-dock button span{font-size:10px}
+ .mobile-dock button.active{color:#fff}
+ body{padding-bottom:62px}
+ footer{margin-bottom:64px}
+}
+@media(min-width:651px){.mobile-dock{display:none}}
