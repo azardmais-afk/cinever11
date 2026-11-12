@@ -40,6 +40,7 @@ export default function Home() {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [channelPlayerSource, setChannelPlayerSource] = useState("superflix");
   const [channelServer, setChannelServer] = useState("superflix");
+  const [channelEmbedIndex, setChannelEmbedIndex] = useState(0);
 
   function extractIds(payload) {
     const found = [];
@@ -70,7 +71,8 @@ export default function Home() {
         name,
         genre: item.category || item.genre || item.genero || item.categoria || (Array.isArray(item.categories) ? item.categories.join(", ") : ""),
         logo: item.logo_url || item.logo || item.logoUrl || item.image || item.poster || item.icon || "",
-        stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || "",
+        stream: item.embed_url || item.stream_url || item.stream || item.url_stream || item.url || item.player || item.iframe || item.embeds?.[0]?.embed_url || "",
+        embeds: Array.isArray(item.embeds) ? item.embeds.filter(embed => embed?.embed_url) : [],
         slug
       };
     }).filter(item => item.name);
@@ -109,6 +111,11 @@ export default function Home() {
         const response = await fetch(`/api/reidosembeds/channels?${params.toString()}`, { cache: "no-store" });
         if (!response.ok) throw new Error(`Rei dos Embeds respondeu HTTP ${response.status}`);
         rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "reidosembeds" }));
+      } else if (server === "reidoscanais") {
+        const response = await fetch("/api/reidoscanais/channels" + (g ? "?category=" + encodeURIComponent(g) : ""), { cache: "no-store" });
+        if (!response.ok) throw new Error(`Rei dos Canais respondeu HTTP ${response.status}`);
+        rows = normalizeChannels(await response.json()).map(channel => ({ ...channel, source: "reidoscanais" }));
+        if (q.trim()) rows = rows.filter(channel => channel.name.toLowerCase().includes(q.trim().toLowerCase()));
       } else {
         throw new Error("Servidor de canais desconhecido.");
       }
@@ -119,7 +126,7 @@ export default function Home() {
     } catch (e) {
       console.error(`Erro ao carregar canais de ${server}:`, e);
       setChannels([]);
-      const label = server === "superflix" ? "SuperFlix" : server === "streambetter" ? "StreamBetter" : "Rei dos Embeds";
+      const label = server === "superflix" ? "SuperFlix" : server === "streambetter" ? "StreamBetter" : server === "reidosembeds" ? "Rei dos Embeds" : "Rei dos Canais";
       setChannelError(`${label}: ${e?.message || "não foi possível carregar os canais"}. Tente novamente.`);
     } finally {
       setChannelLoading(false);
@@ -405,7 +412,7 @@ export default function Home() {
       <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar filmes e séries..." aria-label="Buscar filmes e séries" />{query && <button onClick={() => setQuery("")} aria-label="Limpar busca">×</button>}</div>
     </header>
 
-    {activeTab === "tv" ? <section className="section tv-online" id="tv-online"><div className="section-heading"><div><p className="eyebrow">TRANSMISSÃO AO VIVO</p><h2>TV <em>Online</em></h2></div></div><div className="channel-server-switch" aria-label="Servidor de canais"><button className={channelServer === "superflix" ? "active" : ""} onClick={() => { setChannelServer("superflix"); loadChannels(channelQuery, channelGenre, "superflix"); }}>SuperFlix</button><button className={channelServer === "streambetter" ? "active" : ""} onClick={() => { setChannelServer("streambetter"); loadChannels(channelQuery, channelGenre, "streambetter"); }}>StreamBetter</button><button className={channelServer === "reidosembeds" ? "active" : ""} onClick={() => { setChannelServer("reidosembeds"); loadChannels(channelQuery, channelGenre, "reidosembeds"); }}>Rei dos Embeds</button></div><div className="tv-filters"><input value={channelQuery} onChange={e => setChannelQuery(e.target.value)} onKeyDown={e => { if (e.key === "Enter") loadChannels(); }} placeholder="Buscar canal (ex.: sportv)" /><select value={channelGenre} onChange={e => { setChannelGenre(e.target.value); loadChannels(channelQuery, e.target.value, channelServer); }}><option value="">Todos os gêneros</option><option value="esportes">Esportes</option><option value="noticias">Notícias</option><option value="filmes">Filmes</option><option value="infantil">Infantil</option><option value="abertos">Canais abertos</option></select><button className="primary-btn" onClick={() => loadChannels()}>Buscar</button></div>{channelLoading ? <p className="muted">Carregando canais...</p> : channelError ? <p className="error-message">{channelError}</p> : channels.length ? <div className="channel-grid">{channels.map(ch => <button className="channel-card" key={ch.id} onClick={() => { setSelectedChannel(ch); setChannelPlayerSource(ch.source || channelServer); }}><div className="channel-logo">{ch.logo ? <img src={ch.logo} alt="" /> : <span>TV</span>}</div><strong>{ch.name}</strong><small>{ch.genre || "Canal ao vivo"}</small></button>)}</div> : <p className="muted">Nenhum canal encontrado. Toque em Buscar para carregar a lista.</p>}</section> : query.trim() ? <section className="search-results section">
+    {activeTab === "tv" ? <section className="section tv-online" id="tv-online"><div className="section-heading"><div><p className="eyebrow">TRANSMISSÃO AO VIVO</p><h2>TV <em>Online</em></h2></div></div><div className="channel-server-switch" aria-label="Servidor de canais"><button className={channelServer === "superflix" ? "active" : ""} onClick={() => { setChannelServer("superflix"); loadChannels(channelQuery, channelGenre, "superflix"); }}>SuperFlix</button><button className={channelServer === "streambetter" ? "active" : ""} onClick={() => { setChannelServer("streambetter"); loadChannels(channelQuery, channelGenre, "streambetter"); }}>StreamBetter</button><button className={channelServer === "reidosembeds" ? "active" : ""} onClick={() => { setChannelServer("reidosembeds"); loadChannels(channelQuery, channelGenre, "reidosembeds"); }}>Rei dos Embeds</button><button className={channelServer === "reidoscanais" ? "active" : ""} onClick={() => { setChannelServer("reidoscanais"); setChannelGenre(""); loadChannels(channelQuery, "", "reidoscanais"); }}>Rei dos Canais</button></div><div className="tv-filters"><input value={channelQuery} onChange={e => setChannelQuery(e.target.value)} onKeyDown={e => { if (e.key === "Enter") loadChannels(); }} placeholder="Buscar canal (ex.: sportv)" /><select value={channelGenre} onChange={e => { setChannelGenre(e.target.value); loadChannels(channelQuery, e.target.value, channelServer); }}><option value="">Todos os gêneros</option><option value="esportes">Esportes</option><option value="noticias">Notícias</option><option value="filmes">Filmes</option><option value="infantil">Infantil</option><option value="abertos">Canais abertos</option></select><button className="primary-btn" onClick={() => loadChannels()}>Buscar</button></div>{channelLoading ? <p className="muted">Carregando canais...</p> : channelError ? <p className="error-message">{channelError}</p> : channels.length ? <div className="channel-grid">{channels.map(ch => <button className="channel-card" key={ch.id} onClick={() => { setSelectedChannel(ch); setChannelEmbedIndex(0); setChannelPlayerSource(ch.source || channelServer); }}><div className="channel-logo">{ch.logo ? <img src={ch.logo} alt="" /> : <span>TV</span>}</div><strong>{ch.name}</strong><small>{ch.genre || "Canal ao vivo"}</small></button>)}</div> : <p className="muted">Nenhum canal encontrado. Toque em Buscar para carregar a lista.</p>}</section> : query.trim() ? <section className="search-results section">
       <div className="section-heading"><div><p className="eyebrow">PESQUISA</p><h2>Resultados para “{query}”</h2></div></div>
       {searching ? <p className="muted">Buscando filmes e séries...</p> : cards(results)}
     </section> : <>
