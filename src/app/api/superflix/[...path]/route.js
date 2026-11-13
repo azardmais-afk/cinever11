@@ -25,7 +25,8 @@ export async function GET(request, context) {
       if (value) params.set(key, value.slice(0, key === "q" ? 80 : 30));
     }
 
-    const attempts = await Promise.all(HOSTS.map(async host => {
+    const hosts = category === "channels" ? ["https://superflixapi.boats"] : HOSTS;
+    const attempts = await Promise.all(hosts.map(async host => {
       const target = new URL("/lista", host);
       target.search = params.toString();
       try {
