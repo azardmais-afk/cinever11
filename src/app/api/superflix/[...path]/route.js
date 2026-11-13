@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-const HOSTS = ["https://superflixapi.pro", "https://superflixapi.monster", "https://superflixapi.boats", "https://superflixapi.beer", "https://superflixapi.sbs", "https://superflixapi.baby"];
+const HOSTS = ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.sbs", "https://superflixapi.beer", "https://superflixapi.baby", "https://superflixapi.boats"];
 
 export async function GET(request, context) {
   try {
