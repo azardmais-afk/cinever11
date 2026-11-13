@@ -32,7 +32,7 @@ export async function GET(request, context) {
     // Channels use the same SuperFlix API across its available mirror domains.
     // Try the user-provided domain first, then the service mirrors if it rejects the request.
     const hosts = category === "channels"
-      ? ["https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.pro", ...HOSTS.filter(host => !["https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.pro"].includes(host))]
+      ? ["https://superflixapi.monster", "https://superflixapi.boats", "https://superflixapi.pro", ...HOSTS.filter(host => !["https://superflixapi.monster", "https://superflixapi.boats", "https://superflixapi.pro"].includes(host))]
       : HOSTS;
     const attempts = [];
     for (const host of hosts) {
@@ -42,12 +42,14 @@ export async function GET(request, context) {
         const response = await fetch(target.toString(), {
           headers: {
             Accept: "application/json, text/plain, */*",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+            Referer: host + "/",
+            Origin: host,
             ...(category === "channels" ? {} : { Referer: host + "/canais" })
           },
           redirect: "follow",
           cache: "no-store",
-          signal: AbortSignal.timeout(9000)
+          signal: AbortSignal.timeout(20000)
         });
         if (!response.ok) { attempts.push({ ok: false, host, status: response.status, detail: (await response.text()).slice(0, 160) }); continue; }
         const body = await response.text();
