@@ -9,6 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
+      <head>
+        <script src="https://quge5.com/88/tag.min.js" data-zone="309775" async data-cfasync="false"></script>
+      </head>
       <body>{children}<ServiceWorkerRegistration /></body>
     </html>
   );
