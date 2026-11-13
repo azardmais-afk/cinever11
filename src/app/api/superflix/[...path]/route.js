@@ -40,16 +40,19 @@ export async function GET(request, context) {
       target.search = params.toString();
       try {
         const response = await fetch(target.toString(), {
-          headers: {
-            Accept: "application/json, text/plain, */*",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
-            Referer: host + "/",
-            Origin: host,
-            ...(category === "channels" ? { Referer: host + "/canais" } : {})
-          },
+          // A listagem pública de canais deve ser consultada como GET direto,
+          // sem Origin/Referer artificiais que podem provocar bloqueio no provedor.
+          headers: category === "channels"
+            ? { Accept: "application/json" }
+            : {
+                Accept: "application/json, text/plain, */*",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+                Referer: host + "/",
+                Origin: host
+              },
           redirect: "follow",
           cache: "no-store",
-          signal: AbortSignal.timeout(10000)
+          signal: AbortSignal.timeout(12000)
         });
         if (!response.ok) { attempts.push({ ok: false, host, status: response.status, detail: (await response.text()).slice(0, 160) }); continue; }
         const body = await response.text();
