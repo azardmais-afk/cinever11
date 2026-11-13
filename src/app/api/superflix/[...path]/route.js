@@ -22,7 +22,11 @@ export async function GET(request, context) {
     const params = new URLSearchParams(configs[category]);
     for (const key of ["q", "genre", "limit"]) {
       const value = incoming.searchParams.get(key);
-      if (value) params.set(key, value.slice(0, key === "q" ? 80 : 30));
+      // Keep the default channels request exactly category=canais&format=json.
+      // The UI sends a default limit for other providers; only forward it when filtering.
+      if (value && !(category === "channels" && key === "limit" && !incoming.searchParams.has("q") && !incoming.searchParams.has("genre"))) {
+        params.set(key, value.slice(0, key === "q" ? 80 : 30));
+      }
     }
 
     const hosts = category === "channels" ? ["https://superflixapi.boats"] : HOSTS;
@@ -33,8 +37,8 @@ export async function GET(request, context) {
         const response = await fetch(target.toString(), {
           headers: {
             Accept: "application/json, text/plain, */*",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
-            Referer: host + "/canais"
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+            ...(category === "channels" ? {} : { Referer: host + "/canais" })
           },
           redirect: "follow",
           cache: "no-store",
