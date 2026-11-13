@@ -188,3 +188,31 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
   .modal:not(.channel-modal) .episode-panel .season-list,
   .modal:not(.channel-modal) .episode-panel .episode-list{max-height:38vh;overflow:auto;overscroll-behavior:contain}
 }
+
+
+/* Episódios do catálogo: cartões realmente clicáveis */
+.episode-list .episode{
+  display:grid;
+  width:100%;
+  text-align:left;
+  color:#d3d1d8;
+  font:inherit;
+  cursor:pointer;
+  transition:border-color .18s,background .18s;
+}
+.episode-list button.episode:hover,
+.episode-list button.episode:focus-visible{
+  border-color:#e50914;
+  background:#242027;
+  outline:none;
+}
+.episode-list button.episode.active{
+  border-color:#e50914;
+  background:#26131a;
+}
+.episode-list button.episode small{
+  color:#ff456f;
+  font-size:12px;
+  font-weight:700;
+  margin-top:3px;
+}
