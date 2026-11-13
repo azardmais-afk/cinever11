@@ -32,9 +32,10 @@ export async function GET(request, context) {
     // Channels use the same SuperFlix API across its available mirror domains.
     // Try the user-provided domain first, then the service mirrors if it rejects the request.
     const hosts = category === "channels"
-      ? ["https://superflixapi.boats", ...HOSTS.filter(host => host !== "https://superflixapi.boats")]
+      ? ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats", ...HOSTS.filter(host => !["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats"].includes(host))]
       : HOSTS;
-    const attempts = await Promise.all(hosts.map(async host => {
+    const attempts = [];
+    for (const host of hosts) {
       const target = new URL("/lista", host);
       target.search = params.toString();
       try {
@@ -46,23 +47,24 @@ export async function GET(request, context) {
           },
           redirect: "follow",
           cache: "no-store",
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(9000)
         });
-        if (!response.ok) return { ok: false, host, status: response.status, detail: (await response.text()).slice(0, 160) };
+        if (!response.ok) { attempts.push({ ok: false, host, status: response.status, detail: (await response.text()).slice(0, 160) }); continue; }
         const body = await response.text();
         try {
           const data = JSON.parse(body);
-          const root = data?.data ?? data?.result ?? data;
-          const list = Array.isArray(root) ? root : (root?.channels || root?.items || root?.results || root?.data || data?.channels || data?.items || data?.results || []);
-          if (category === "channels" && !list.length) return { ok: false, host, status: response.status, detail: "A API respondeu sem canais." };
-          return { ok: true, host, data };
+          const roots = [data?.data, data?.result, data];
+          const list = roots.flatMap(root => Array.isArray(root) ? [root] : [root?.channels, root?.items, root?.results, root?.data]).find(Array.isArray) || [];
+          if (category === "channels" && !list.length) { attempts.push({ ok: false, host, status: response.status, detail: "A API respondeu sem canais." }); continue; }
+          attempts.push({ ok: true, host, data });
+          break;
         } catch {
-          return { ok: false, host, status: response.status, detail: "Resposta não é JSON." };
+          attempts.push({ ok: false, host, status: response.status, detail: "Resposta não é JSON." });
         }
       } catch (error) {
-        return { ok: false, host, detail: error?.message || "Falha de conexão" };
+        attempts.push({ ok: false, host, detail: error?.message || "Falha de conexão" });
       }
-    }));
+    }
     const success = attempts.find(result => result.ok);
     if (success) {
       return NextResponse.json(success.data, {
