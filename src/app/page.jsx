@@ -335,6 +335,14 @@ export default function Home() {
   useEffect(() => { loadCatalog(kind); }, [kind]);
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(error => {
+        console.error("Falha ao registrar o service worker de monetização:", error);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     if (!query.trim()) { setResults([]); setSearching(false); return; }
     const timer = setTimeout(async () => {
       setSearching(true);
