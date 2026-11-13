@@ -28,11 +28,16 @@ export async function GET(request, context) {
       headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; Smartflix/1.0)" },
       redirect: "follow",
       cache: "no-store",
-      signal: AbortSignal.timeout(12000)
+      signal: AbortSignal.timeout(20000)
     });
     const body = await response.text();
     if (!response.ok) {
-      return NextResponse.json({ error: "Falha ao consultar Rei dos Canais.", upstreamStatus: response.status, detail: body.slice(0, 300) }, { status: response.status === 404 ? 404 : 502 });
+      return NextResponse.json({
+        error: "Falha ao consultar Rei dos Canais.",
+        upstreamStatus: response.status,
+        upstreamUrl: target.toString(),
+        detail: body.slice(0, 500)
+      }, { status: response.status === 404 ? 404 : 502 });
     }
     let data;
     try { data = JSON.parse(body); }
