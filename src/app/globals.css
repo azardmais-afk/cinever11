@@ -216,3 +216,29 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
   font-weight:700;
   margin-top:3px;
 }
+
+
+/* Episódios do catálogo: botões reais e fáceis de tocar no celular */
+.episode-list .episode{
+  appearance:none;
+  -webkit-appearance:none;
+  display:grid;
+  width:100%;
+  text-align:left;
+  color:#d3d1d8;
+  font:inherit;
+  cursor:pointer;
+  pointer-events:auto;
+  position:relative;
+  z-index:1;
+  background:#1b1b22;
+  border:1px solid #303039;
+  border-radius:10px;
+  padding:16px;
+  gap:8px;
+}
+.episode-list .episode strong{color:#f5f5f7;font-size:15px}
+.episode-list .episode span{color:#a5a5ae;font-size:13px;line-height:1.6}
+.episode-list .episode small{display:block;color:#ff496d;font-size:12px;font-weight:700;margin-top:3px}
+.episode-list .episode.active{border-color:#e50914;background:#24151a}
+.episode-list .episode:focus-visible{outline:2px solid #fff;outline-offset:2px}
