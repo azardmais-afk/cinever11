@@ -27,7 +27,7 @@ export default function Home() {
   const [episodes, setEpisodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [playerSource, setPlayerSource] = useState("embedmovies");
+  const [playerSource, setPlayerSource] = useState("megaembed");
   const [megaDomain, setMegaDomain] = useState("mgeb.space");
   const megaDomains = ["mgeb.space", "mgeb.lat", "mgeb.casa", "mgeb.quest"];
   const [redeflixEpisode, setRedeflixEpisode] = useState({ season: 1, episode: 1 });
@@ -354,7 +354,7 @@ export default function Home() {
     setTrailer("");
     setProviders([]);
     setProviderLink("");
-    setPlayerSource("embedmovies");
+    setPlayerSource("megaembed");
     setRedeflixEpisode({ season: 1, episode: 1 });
     setSeason(null);
     setEpisodes([]);
