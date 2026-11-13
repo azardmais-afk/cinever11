@@ -242,3 +242,19 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
 .episode-list .episode small{display:block;color:#ff496d;font-size:12px;font-weight:700;margin-top:3px}
 .episode-list .episode.active{border-color:#e50914;background:#24151a}
 .episode-list .episode:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+
+/* Episódios do catálogo: cartões claramente clicáveis no celular */
+.episode-button{
+  width:100%;
+  text-align:left;
+  color:#d3d1d8;
+  font:inherit;
+  cursor:pointer;
+  appearance:none;
+  -webkit-appearance:none;
+  transition:border-color .18s,background .18s;
+}
+.episode-button:active,.episode-button:hover{border-color:#e50914;background:#24242c}
+.episode-button.active{border-color:#e50914;background:#24151b}
+.episode-button small{color:#ff5575;font-size:12px;font-weight:700}
