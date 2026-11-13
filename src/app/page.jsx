@@ -383,6 +383,7 @@ export default function Home() {
 
   async function loadSeason(id, number) {
     setSeason(number);
+    setRedeflixEpisode({ season: number, episode: 1 });
     setEpisodes([]);
     try {
       const data = await api(`tv/${id}/season/${number}?language=pt-BR`);
@@ -509,7 +510,7 @@ export default function Home() {
           </section>
           <p>{details?.overview || selected.overview || "Sinopse não disponível."}</p>
           {details?.genres?.length > 0 && <div className="chips">{details.genres.map(g => <span key={g.id}>{g.name}</span>)}</div>}
-          {selected.media_type === "tv" && details?.seasons?.length > 0 && <div className="episode-panel"><h3>Temporadas e episódios</h3><div className="season-list">{details.seasons.filter(s => s.season_number >= 0).map(s => <button key={s.id} className={season === s.season_number ? "active" : ""} onClick={() => loadSeason(selected.id, s.season_number)}>{s.name}</button>)}</div>{episodes.length > 0 && <div className="episode-list">{episodes.map(ep => <div className="episode" key={ep.id}><strong>{ep.episode_number}. {ep.name}</strong><span>{ep.overview || "Sinopse não disponível."}</span></div>)}</div>}</div>}
+          {selected.media_type === "tv" && details?.seasons?.length > 0 && <div className="episode-panel"><h3>Temporadas e episódios</h3><div className="season-list">{details.seasons.filter(s => s.season_number >= 0).map(s => <button key={s.id} className={season === s.season_number ? "active" : ""} onClick={() => loadSeason(selected.id, s.season_number)}>{s.name}</button>)}</div>{episodes.length > 0 && <div className="episode-list">{episodes.map(ep => <button type="button" className={redeflixEpisode.season === season && redeflixEpisode.episode === ep.episode_number ? "episode active" : "episode"} key={ep.id} onClick={() => { setRedeflixEpisode({ season: season ?? 1, episode: ep.episode_number }); document.querySelector(".embed-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }} aria-label={`Reproduzir episódio ${ep.episode_number}: ${ep.name}`}><strong>{ep.episode_number}. {ep.name}</strong><span>{ep.overview || "Sinopse não disponível."}</span><small>▶ Tocar episódio</small></button>)}</div>}</div>}
           {details?.credits?.cast?.length > 0 && <div><h3>Elenco principal</h3><p className="muted">{details.credits.cast.slice(0, 8).map(p => p.name).join(" · ")}</p></div>}
           {providers.length > 0 && <div className="provider-panel"><h3>Onde assistir no Brasil</h3><div className="provider-list">{providers.map(p => <div className="provider" key={p.provider_id}>{p.logo_path && <img src={poster(p.logo_path, "w92")} alt="" />}<span>{p.provider_name}</span></div>)}</div>{providerLink && <a className="primary-btn trailer" href={providerLink} target="_blank" rel="noreferrer">Ver opções oficiais ↗</a>}</div>}
           {providers.length === 0 && providerLink && <div className="provider-panel"><h3>Onde assistir</h3><a className="primary-btn trailer" href={providerLink} target="_blank" rel="noreferrer">Consultar opções oficiais ↗</a></div>}
