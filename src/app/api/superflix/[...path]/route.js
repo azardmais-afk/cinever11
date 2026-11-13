@@ -32,7 +32,7 @@ export async function GET(request, context) {
     // Channels use the same SuperFlix API across its available mirror domains.
     // Try the user-provided domain first, then the service mirrors if it rejects the request.
     const hosts = category === "channels"
-      ? ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats", ...HOSTS.filter(host => !["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats"].includes(host))]
+      ? ["https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.pro", ...HOSTS.filter(host => !["https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.pro"].includes(host))]
       : HOSTS;
     const attempts = [];
     for (const host of hosts) {
