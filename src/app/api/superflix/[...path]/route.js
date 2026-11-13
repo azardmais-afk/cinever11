@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-const HOSTS = ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats", "https://superflixapi.beer", "https://superflixapi.sbs", "https://superflixapi.baby"];
+const HOSTS = ["https://superflixapi.pro", "https://superflixapi.monster", "https://superflixapi.boats", "https://superflixapi.beer", "https://superflixapi.sbs", "https://superflixapi.baby"];
 
 export async function GET(request, context) {
   try {
@@ -43,8 +43,8 @@ export async function GET(request, context) {
         const body = await response.text();
         try {
           const data = JSON.parse(body);
-          const root = data?.data ?? data;
-          const list = Array.isArray(root) ? root : (root?.channels || root?.items || root?.results || []);
+          const root = data?.data ?? data?.result ?? data;
+          const list = Array.isArray(root) ? root : (root?.channels || root?.items || root?.results || root?.data || data?.channels || data?.items || data?.results || []);
           if (category === "channels" && !list.length) return { ok: false, host, status: response.status, detail: "A API respondeu sem canais." };
           return { ok: true, host, data };
         } catch {
