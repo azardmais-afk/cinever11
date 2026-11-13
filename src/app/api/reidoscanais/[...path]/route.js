@@ -24,12 +24,32 @@ export async function GET(request, context) {
       return NextResponse.json({ error: "Rota Rei dos Canais não encontrada." }, { status: 404 });
     }
 
-    const response = await fetch(target.toString(), {
-      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; Smartflix/1.0)" },
-      redirect: "follow",
-      cache: "no-store",
-      signal: AbortSignal.timeout(20000)
-    });
+    let response = null;
+    let lastError = null;
+    // Retry only transient upstream failures; keep the documented API endpoint unchanged.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await fetch(target.toString(), {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; Smartflix/1.0)",
+            Referer: "https://reidoscanais.li/"
+          },
+          redirect: "follow",
+          cache: "no-store",
+          signal: AbortSignal.timeout(12000)
+        });
+        if (response.ok || response.status === 400 || response.status === 404) break;
+        lastError = new Error("API respondeu HTTP " + response.status);
+      } catch (error) {
+        lastError = error;
+        response = null;
+      }
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+    }
+    if (!response) {
+      return NextResponse.json({ error: "API Rei dos Canais indisponível.", detail: lastError?.message || "Falha de conexão" }, { status: 502 });
+    }
     const body = await response.text();
     if (!response.ok) {
       return NextResponse.json({
