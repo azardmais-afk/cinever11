@@ -145,3 +145,20 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
 .channel-server-switch button{appearance:none;border:1px solid #303039;border-radius:999px;background:#17171d;color:#bdbdc5;padding:10px 22px;font-size:14px;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
 .channel-server-switch button.active{background:#e50914;border-color:#e50914;color:#fff;font-weight:700}
 .channel-server-switch button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+
+/* Modal de reprodução ampliado: mais espaço para navegar pelos episódios */
+@media (min-width:651px){
+  .modal:not(.channel-modal){width:min(1100px,96vw);max-height:94vh}
+  .modal:not(.channel-modal) .embed-player{height:min(68vh,720px);aspect-ratio:auto}
+}
+@media (max-width:650px){
+  .modal-backdrop{padding:6px;align-items:stretch;z-index:100}
+  .modal:not(.channel-modal){width:100%;max-height:calc(100dvh - 12px);height:calc(100dvh - 12px);border-radius:10px}
+  .modal:not(.channel-modal) .modal-visual{min-height:190px;padding:20px}
+  .modal:not(.channel-modal) .modal-title h2{font-size:25px}
+  .modal:not(.channel-modal) .modal-body{padding:14px 14px 28px}
+  .modal:not(.channel-modal) .embed-section{margin-bottom:18px}
+  .modal:not(.channel-modal) .embed-player{height:62dvh;min-height:390px;max-height:680px;aspect-ratio:auto;border-radius:8px}
+  .modal:not(.channel-modal) .embed-player iframe{height:100%;width:100%}
+}
