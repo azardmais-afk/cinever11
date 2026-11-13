@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-const HOSTS = ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.sbs", "https://superflixapi.beer", "https://superflixapi.baby", "https://superflixapi.boats"];
+const HOSTS = ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.beer", "https://superflixapi.sbs", "https://superflixapi.baby", "https://superflixapi.boats"];
 
 export async function GET(request, context) {
   try {
@@ -32,7 +32,7 @@ export async function GET(request, context) {
     // Channels use the same SuperFlix API across its available mirror domains.
     // Try the user-provided domain first, then the service mirrors if it rejects the request.
     const hosts = category === "channels"
-      ? ["https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.pro", ...HOSTS.filter(host => !["https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.pro"].includes(host))]
+      ? ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats", ...HOSTS.filter(host => !["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats"].includes(host))]
       : HOSTS;
     const attempts = [];
     for (const host of hosts) {
@@ -45,7 +45,7 @@ export async function GET(request, context) {
             "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
             Referer: host + "/",
             Origin: host,
-            ...(category === "channels" ? {} : { Referer: host + "/canais" })
+            ...(category === "channels" ? { Referer: host + "/canais" } : {})
           },
           redirect: "follow",
           cache: "no-store",
