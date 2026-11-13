@@ -1,4 +1,5 @@
 import "./globals.css";
+import ServiceWorkerRegistration from "./ServiceWorkerRegistration";
 
 export const metadata = {
   title: "SMARTFLIX — Seu universo de filmes e séries",
@@ -8,7 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>{children}<ServiceWorkerRegistration /></body>
     </html>
   );
 }
