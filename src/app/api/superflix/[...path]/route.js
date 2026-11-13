@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-const HOSTS = ["https://superflixapi.pro", "https://superflixapi.boats", "https://superflixapi.monster", "https://superflixapi.baby", "https://superflixapi.beer", "https://superflixapi.sbs"];
+const HOSTS = ["https://superflixapi.monster", "https://superflixapi.pro", "https://superflixapi.boats", "https://superflixapi.beer", "https://superflixapi.sbs", "https://superflixapi.baby"];
 
 export async function GET(request, context) {
   try {
@@ -32,12 +32,12 @@ export async function GET(request, context) {
         const response = await fetch(target.toString(), {
           headers: {
             Accept: "application/json, text/plain, */*",
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
             Referer: host + "/canais"
           },
           redirect: "follow",
           cache: "no-store",
-          signal: AbortSignal.timeout(5000)
+          signal: AbortSignal.timeout(12000)
         });
         if (!response.ok) return { ok: false, host, status: response.status, detail: (await response.text()).slice(0, 160) };
         const body = await response.text();
