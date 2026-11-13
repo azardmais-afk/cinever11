@@ -258,3 +258,50 @@ footer{margin-bottom:calc(66px + env(safe-area-inset-bottom))}
 .episode-button:active,.episode-button:hover{border-color:#e50914;background:#24242c}
 .episode-button.active{border-color:#e50914;background:#24151b}
 .episode-button small{color:#ff5575;font-size:12px;font-weight:700}
+
+
+/* Rolagem vertical da página mesmo perto de players incorporados */
+@media (max-width:650px){
+  .modal:not(.channel-modal){
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    overscroll-behavior:contain;
+    height:calc(100dvh - 8px);
+    max-height:calc(100dvh - 8px);
+  }
+  .modal:not(.channel-modal) .modal-body{
+    flex:1 1 auto;
+    min-height:0;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-y:contain;
+    touch-action:pan-y;
+    padding-bottom:calc(30px + env(safe-area-inset-bottom));
+  }
+  .modal:not(.channel-modal) .embed-player{
+    position:relative;
+    height:76dvh;
+    min-height:520px;
+    max-height:780px;
+    flex:none;
+    overflow:hidden;
+    touch-action:auto;
+  }
+  /* Laterais transparentes: arraste nelas para rolar a página sem cobrir o centro do player */
+  .modal:not(.channel-modal) .embed-player::before,
+  .modal:not(.channel-modal) .embed-player::after{
+    content:"";
+    position:absolute;
+    z-index:5;
+    top:0;
+    bottom:0;
+    width:16px;
+    background:transparent;
+    touch-action:pan-y;
+    pointer-events:auto;
+  }
+  .modal:not(.channel-modal) .embed-player::before{left:0}
+  .modal:not(.channel-modal) .embed-player::after{right:0}
+}
