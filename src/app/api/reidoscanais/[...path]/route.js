@@ -32,12 +32,11 @@ export async function GET(request, context) {
         response = await fetch(target.toString(), {
           headers: {
             Accept: "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; Smartflix/1.0)",
-            Referer: "https://reidoscanais.li/"
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
           },
           redirect: "follow",
           cache: "no-store",
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(20000)
         });
         if (response.ok || response.status === 400 || response.status === 404) break;
         lastError = new Error("API respondeu HTTP " + response.status);
