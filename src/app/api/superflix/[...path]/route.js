@@ -29,7 +29,11 @@ export async function GET(request, context) {
       }
     }
 
-    const hosts = category === "channels" ? ["https://superflixapi.boats"] : HOSTS;
+    // Channels use the same SuperFlix API across its available mirror domains.
+    // Try the user-provided domain first, then the service mirrors if it rejects the request.
+    const hosts = category === "channels"
+      ? ["https://superflixapi.boats", ...HOSTS.filter(host => host !== "https://superflixapi.boats")]
+      : HOSTS;
     const attempts = await Promise.all(hosts.map(async host => {
       const target = new URL("/lista", host);
       target.search = params.toString();
